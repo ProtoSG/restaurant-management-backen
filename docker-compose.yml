@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ddbb_restaurant_management
+    environment:
+      POSTGRES_DB: ddbb_restaurant_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres 
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: restaurant_management_api 
+    depends_on:
+      - db 
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/ddbb_restaurant_management?user=postgres&password=postgres
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
