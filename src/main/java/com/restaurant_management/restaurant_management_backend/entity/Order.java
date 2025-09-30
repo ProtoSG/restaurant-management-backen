@@ -1,6 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.entity;
 
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
+import com.restaurant_management.restaurant_management_backend.enums.TableStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 
 import java.math.BigDecimal;
@@ -64,6 +65,14 @@ public class Order {
     if (this.type != OrderType.DINE_IN) {
       throw new IllegalStateException("Sólo las órdenes de 'DINE_IN' se pueden asignar a una mesa");
     }
+    if (table.getStatus() == TableStatus.OCCUPIED) {
+      throw new IllegalStateException("La mesa esta ocupada");
+    }
+    if (table.getStatus() == TableStatus.RESERVED) {
+      throw new IllegalStateException("La mesa esta reservada");
+    }
+
+    table.occupy();
     this.table = table;
   }
 
