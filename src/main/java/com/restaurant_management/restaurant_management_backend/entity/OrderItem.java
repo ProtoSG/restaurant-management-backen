@@ -40,16 +40,12 @@ public class OrderItem {
   private Order order;
 
   @Column(name = "quantity")
-  private Integer quantity;
+  @Builder.Default
+  private Integer quantity = 0;
 
   @Column(name = "sub_total")
-  private BigDecimal subTotal;
-
-  @PrePersist
-  void applyDefaults() {
-    if ( quantity == null ) quantity = 0;
-    if ( subTotal == null ) subTotal = BigDecimal.ZERO;
-  }
+  @Builder.Default
+  private BigDecimal subTotal = BigDecimal.ZERO;
 
   public void assignProduct(Product product, Integer quantity) {
     this.product = product;
