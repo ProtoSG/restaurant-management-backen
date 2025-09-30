@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
     exception.getBindingResult().getFieldErrors()
       .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
 
-    String errorMessage = "Errores de validación en los campos" 
+    String errorMessage = "Errores de validación en los campos: " 
       + String.join(", ", errors.keySet());
 
     ErrorResponse errorResponse = new ErrorResponse( 
@@ -70,6 +70,10 @@ public class GlobalExceptionHandler {
 
     if (message != null && message.contains("TableStatus")) {
       message = "El campo 'status' debe ser uno de los valores: FREE, RESERVED, OCCUPIED.";
+    } else if (message != null && message.contains("OrderType")) {
+      message = "El campo 'type' debe ser uno de los valores: DINE_IN, TAKEAWAY, DELIVERY";
+    } else if (message != null && message.contains("OrderStatus")) {
+      message = "El campo 'type' debe ser uno de los valores: CREATED, IN_PROGRESS, READY, PAID, CANCELLED";
     } else {
       message = "Error de formato en la petición. Verifica los datos enviados.";
     }
