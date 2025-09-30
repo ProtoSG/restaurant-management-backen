@@ -24,9 +24,7 @@ public class TableServiceImpl implements TableService {
   public TableDTO save(TableDTO tableDTO) {
     Table newTable = tableMapper.toEntity(tableDTO);
 
-    Table savedTable = tableRepository.save(newTable);
-
-    return tableMapper.toDto(savedTable);
+    return tableMapper.toDto(tableRepository.save(newTable));
   }
 
   public List<TableDTO> findAll() {
