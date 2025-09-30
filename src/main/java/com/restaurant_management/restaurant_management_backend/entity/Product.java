@@ -10,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,15 +34,11 @@ public class Product {
   private String name;
 
   @Column(name = "price")
-  private BigDecimal price;
+  @Builder.Default
+  private BigDecimal price = BigDecimal.ZERO;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "category_id", referencedColumnName = "id", nullable = false)
   private Category category;
-
-  @PrePersist
-  void applyDefaults() {
-    if ( price == null ) price = BigDecimal.ZERO;
-  }
 
 }
