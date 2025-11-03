@@ -1,11 +1,11 @@
 package com.restaurant_management.restaurant_management_backend.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,19 +16,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class OrderDTO {
+public class OrderWithOrderItemsDTO {
 
   private Long id;
-
   private String orderCode;
-
-  @NotNull(message = "La mesa es obligatoria")
-  private Long tableId;
-
-  private OrderType type;
-
   private OrderStatus status;
-
+  private OrderType type;
   private BigDecimal total;
 
+  private List<OrderItemDTO> items;
 }
