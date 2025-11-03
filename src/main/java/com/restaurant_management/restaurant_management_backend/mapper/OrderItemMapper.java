@@ -24,7 +24,6 @@ public class OrderItemMapper {
     return OrderItemDTO.builder()
       .id(orderItem.getId())
       .productId(orderItem.getProduct().getId())
-      .orderId(orderItem.getOrder().getId())
       .quantity(orderItem.getQuantity())
       .subTotal(orderItem.getSubTotal())
       .build();

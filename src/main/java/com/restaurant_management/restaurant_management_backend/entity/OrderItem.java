@@ -52,4 +52,17 @@ public class OrderItem {
     this.quantity = quantity;
     this.subTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
   }
+
+  public void assignProductCustomPrice(Product product, BigDecimal price, Integer quantity) {
+    this.product = product;
+    this.quantity = quantity;
+    BigDecimal effectivePrice = (price != null) ? price : product.getPrice();
+    this.subTotal = effectivePrice.multiply(BigDecimal.valueOf(quantity));
+  }
+
+  public void calculateSubTotal() {
+    if (this.product != null && this.quantity != null) {
+      this.subTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+    }
+  }
 }

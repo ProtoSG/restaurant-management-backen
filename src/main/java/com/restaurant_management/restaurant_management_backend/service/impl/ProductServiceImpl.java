@@ -72,4 +72,15 @@ public class ProductServiceImpl implements ProductService {
 
     productRepository.deleteById(id);
   }
+
+  public List<ProductDTO> findByCategoryId(Long id) {
+    Category category = categoryRepository.findById(id)
+      .orElseThrow(() -> new ResourceNotFoundException("Categoria no encontrada"));
+
+    List<Product> products = productRepository.findByCategoryId(category.getId());
+
+    return products.stream()
+      .map(productMapper::toDto)
+      .toList();
+  }
 }

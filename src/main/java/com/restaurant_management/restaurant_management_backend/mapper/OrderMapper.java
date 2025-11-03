@@ -15,6 +15,7 @@ public class OrderMapper {
 
     return OrderDTO.builder()
       .id(order.getId())
+      .orderCode(order.getOrderCode())
       .tableId(order.getTable().getId())
       .type(order.getType())
       .status(order.getStatus())
@@ -27,6 +28,7 @@ public class OrderMapper {
 
     return Order.builder()
       .id(orderDTO.getId())
+      .orderCode(orderDTO.getOrderCode())
       .type(orderDTO.getType())
       .status(orderDTO.getStatus())
       .total(orderDTO.getTotal())
