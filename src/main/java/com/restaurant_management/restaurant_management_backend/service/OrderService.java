@@ -5,6 +5,7 @@ import java.util.List;
 import com.restaurant_management.restaurant_management_backend.dto.OrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderTypeDTO;
+import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
 
 public interface OrderService {
   
@@ -18,4 +19,5 @@ public interface OrderService {
   public OrderDTO cancelOrder(Long id);
   public void addProducts(Long orderId, OrderItemsDTO orderItems);
 
+  public OrderDTO payOrder(Long orderId, TransactionDTO transactionDTO);
 }
