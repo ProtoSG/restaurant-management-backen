@@ -70,4 +70,10 @@ public class ProductController {
     return ResponseEntity.noContent().build();
   }
 
+  @GetMapping("/categories/{id}")
+  public ResponseEntity<?> getByCategoryId(@PathVariable Long id) {
+    List<ProductDTO> products = productService.findByCategoryId(id);
+
+    return ResponseEntity.status(HttpStatus.OK).body(products);
+  }
 }

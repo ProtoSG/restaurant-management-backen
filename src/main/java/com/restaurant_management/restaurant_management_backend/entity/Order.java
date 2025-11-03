@@ -19,7 +19,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -39,6 +38,9 @@ public class Order {
   @Column(name = "id")
   private Long id;
 
+  @Column(name = "order_code", unique = true, nullable = false)
+  private String orderCode;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "table_id", referencedColumnName = "id", nullable = false)
   private Table table;
@@ -46,6 +48,10 @@ public class Order {
   @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, orphanRemoval = true)
   @Builder.Default
   private List<OrderItem> items = new ArrayList<>();
+
+  @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, orphanRemoval = true)
+  @Builder.Default
+  private List<Transaction> transactions = new ArrayList<>();
 
   @Enumerated(EnumType.STRING)
   @Column(name = "type", nullable = false)
@@ -82,14 +88,23 @@ public class Order {
     recalculateTotal();
   }
 
+  public void removeItem(OrderItem item) {
+    this.items.remove(item);
+    recalculateTotal();
+  }
+
   private void recalculateTotal() {
     this.total = items.stream()
       .map(OrderItem::getSubTotal)
       .reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
+  public void calculateTotal() {
+    recalculateTotal();
+  }
+
   public void markAsPaid() {
-    if (this.status != OrderStatus.IN_PROGRESS) {
+    if (this.status != OrderStatus.CREATED) {
         throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
     }
     this.status = OrderStatus.PAID;

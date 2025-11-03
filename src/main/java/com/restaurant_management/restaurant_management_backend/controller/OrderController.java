@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant_management.restaurant_management_backend.dto.OrderDTO;
-import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderTypeDTO;
+import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
 import com.restaurant_management.restaurant_management_backend.service.OrderService;
 
 import jakarta.validation.Valid;
@@ -93,4 +93,15 @@ public class OrderController {
 
     return ResponseEntity.noContent().build();
   }
+
+  @PostMapping("/{id}/pay")
+  public ResponseEntity<?> payOrder(
+      @PathVariable Long id,
+      @RequestBody @Valid TransactionDTO transactionDTO
+  ) {
+    OrderDTO orderDTO = orderService.payOrder(id, transactionDTO);
+    
+    return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
+  }
+
 }

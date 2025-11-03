@@ -1,5 +1,6 @@
 package com.restaurant_management.restaurant_management_backend.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -9,18 +10,23 @@ import com.restaurant_management.restaurant_management_backend.dto.OrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderTypeDTO;
+import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
 import com.restaurant_management.restaurant_management_backend.entity.Order;
 import com.restaurant_management.restaurant_management_backend.entity.OrderItem;
 import com.restaurant_management.restaurant_management_backend.entity.Product;
 import com.restaurant_management.restaurant_management_backend.entity.Table;
+import com.restaurant_management.restaurant_management_backend.entity.Transaction;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
+import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 import com.restaurant_management.restaurant_management_backend.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.mapper.OrderMapper;
 import com.restaurant_management.restaurant_management_backend.repository.OrderItemRepository;
 import com.restaurant_management.restaurant_management_backend.repository.OrderRepository;
 import com.restaurant_management.restaurant_management_backend.repository.ProductRepository;
 import com.restaurant_management.restaurant_management_backend.repository.TableRepository;
+import com.restaurant_management.restaurant_management_backend.repository.TransactionRepository;
+import com.restaurant_management.restaurant_management_backend.service.OrderCodeService;
 import com.restaurant_management.restaurant_management_backend.service.OrderService;
 
 import lombok.RequiredArgsConstructor;
@@ -33,12 +39,18 @@ public class OrderServiceImpl implements OrderService {
   private final TableRepository tableRepository;
   private final OrderItemRepository orderItemRepository;
   private final ProductRepository productRepository;
-  
+  private final TransactionRepository transactionRepository;
+  private final OrderCodeService orderCodeService;
+
   private final OrderMapper orderMapper;
 
   @Transactional
   public OrderDTO save(OrderDTO orderDTO) {
-    Order newOrder = Order.builder().build();
+    String orderCode = orderCodeService.generateNextOrderCode();
+    
+    Order newOrder = Order.builder()
+        .orderCode(orderCode)
+        .build();
 
     Table table = tableRepository.findById(orderDTO.getTableId())
         .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
@@ -131,6 +143,33 @@ public class OrderServiceImpl implements OrderService {
     }
 
     orderRepository.save(order);
+  }
+
+  @Override
+  @Transactional
+  public OrderDTO payOrder(Long orderId, TransactionDTO transactionDTO) {
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+    
+    order.markAsPaid();
+    
+    Transaction transaction = Transaction.builder()
+        .order(order)
+        .total(order.getTotal())
+        .paymentMethod(transactionDTO.getPaymentMethod())
+        .status(TransactionStatus.COMPLETED)
+        .transactionDate(LocalDateTime.now())
+        .build();
+    
+    transactionRepository.save(transaction);
+    
+    if (order.getType() == OrderType.DINE_IN) {
+        Table table = order.getTable();
+        table.free();
+        tableRepository.save(table);
+    }
+    
+    return orderMapper.toDto(orderRepository.save(order));
   }
 
 }
