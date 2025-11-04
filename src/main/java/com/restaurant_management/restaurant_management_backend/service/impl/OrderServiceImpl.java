@@ -3,6 +3,8 @@ package com.restaurant_management.restaurant_management_backend.service.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,16 +18,19 @@ import com.restaurant_management.restaurant_management_backend.entity.OrderItem;
 import com.restaurant_management.restaurant_management_backend.entity.Product;
 import com.restaurant_management.restaurant_management_backend.entity.Table;
 import com.restaurant_management.restaurant_management_backend.entity.Transaction;
+import com.restaurant_management.restaurant_management_backend.entity.User;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
 import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 import com.restaurant_management.restaurant_management_backend.exceptions.ResourceNotFoundException;
+import com.restaurant_management.restaurant_management_backend.exceptions.UnauthorizedException;
 import com.restaurant_management.restaurant_management_backend.mapper.OrderMapper;
 import com.restaurant_management.restaurant_management_backend.repository.OrderItemRepository;
 import com.restaurant_management.restaurant_management_backend.repository.OrderRepository;
 import com.restaurant_management.restaurant_management_backend.repository.ProductRepository;
 import com.restaurant_management.restaurant_management_backend.repository.TableRepository;
 import com.restaurant_management.restaurant_management_backend.repository.TransactionRepository;
+import com.restaurant_management.restaurant_management_backend.repository.UserRepository;
 import com.restaurant_management.restaurant_management_backend.service.OrderCodeService;
 import com.restaurant_management.restaurant_management_backend.service.OrderService;
 
@@ -41,6 +46,7 @@ public class OrderServiceImpl implements OrderService {
   private final ProductRepository productRepository;
   private final TransactionRepository transactionRepository;
   private final OrderCodeService orderCodeService;
+  private final UserRepository userRepository;
 
   private final OrderMapper orderMapper;
 
@@ -151,10 +157,21 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderRepository.findById(orderId)
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
     
+    // Get current authenticated user
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()) {
+      throw new UnauthorizedException("Usuario no autenticado");
+    }
+    
+    String userEmail = authentication.getName();
+    User user = userRepository.findByEmail(userEmail)
+      .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+    
     order.markAsPaid();
     
     Transaction transaction = Transaction.builder()
         .order(order)
+        .user(user)
         .total(order.getTotal())
         .paymentMethod(transactionDTO.getPaymentMethod())
         .status(TransactionStatus.COMPLETED)

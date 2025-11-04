@@ -20,6 +20,8 @@ public class TransactionDTO {
 
   private Long id;
   private Long orderId;
+  private Long userId;
+  private String userName;
   private BigDecimal total;
   private PaymentMethodType paymentMethod;
   private TransactionStatus status;
