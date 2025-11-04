@@ -86,4 +86,38 @@ public class GlobalExceptionHandler {
 
     return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
   }
+
+  @ExceptionHandler(UnauthorizedException.class)
+  public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException exception) {
+    ErrorResponse errorResponse = new ErrorResponse( 
+      exception.getMessage(),
+      HttpStatus.UNAUTHORIZED.value(),
+      "Credenciales inválidas"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+  }
+
+  @ExceptionHandler(TokenExpiredException.class)
+  public ResponseEntity<ErrorResponse> handleTokenExpiredException(TokenExpiredException exception) {
+    ErrorResponse errorResponse = new ErrorResponse(
+      exception.getMessage(),
+      HttpStatus.UNAUTHORIZED.value(),
+      "Token expirado"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+  }
+
+  @ExceptionHandler(InvalidTokenException.class)
+  public ResponseEntity<ErrorResponse> handleInvalidTokenException(InvalidTokenException exception) {
+    ErrorResponse errorResponse = new ErrorResponse(
+      exception.getMessage(),
+      HttpStatus.UNAUTHORIZED.value(),
+      "Token inválido"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+  }
+
 }
