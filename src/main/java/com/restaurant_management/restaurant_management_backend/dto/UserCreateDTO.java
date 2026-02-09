@@ -1,6 +1,6 @@
 package com.restaurant_management.restaurant_management_backend.dto;
 
-import com.restaurant_management.restaurant_management_backend.enums.Role;
+import com.restaurant_management.restaurant_management_backend.enums.RoleName;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -17,13 +17,13 @@ public class UserCreateDTO {
 
   @NotBlank(message = "El nombre el obligatoria")
   private String name;
-  
-  @Email(message = "Debe ser un email válido")
-  private String email;
+
+  @NotBlank(message = "El username es obligatorio")
+  private String username;
 
   @NotBlank(message = "La contraseña es obligatoria")
   private String password;
 
   @NotNull(message = "El rol es obligatorio")
-  private Role role;
+  private RoleName role;
 }
