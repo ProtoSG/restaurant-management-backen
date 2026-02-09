@@ -14,7 +14,7 @@ import lombok.Setter;
 @Builder
 public class AuthResponseDTO {
 
-  private String email;
+  private String username;
   private String token;
 
   @JsonIgnore
