@@ -20,6 +20,8 @@ public class OrderMapper {
       .type(order.getType())
       .status(order.getStatus())
       .total(order.getTotal())
+      .paidAmount(order.getPaidAmount())
+      .remainingAmount(order.getRemainingAmount())
       .build();
   }
 

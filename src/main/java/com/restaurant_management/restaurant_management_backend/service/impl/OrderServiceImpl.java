@@ -1,5 +1,6 @@
 package com.restaurant_management.restaurant_management_backend.service.impl;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import com.restaurant_management.restaurant_management_backend.dto.OrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderTypeDTO;
+import com.restaurant_management.restaurant_management_backend.dto.PartialPaymentDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
 import com.restaurant_management.restaurant_management_backend.entity.Order;
 import com.restaurant_management.restaurant_management_backend.entity.OrderItem;
@@ -21,6 +23,7 @@ import com.restaurant_management.restaurant_management_backend.entity.Transactio
 import com.restaurant_management.restaurant_management_backend.entity.User;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
+import com.restaurant_management.restaurant_management_backend.enums.PaymentMethodType;
 import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 import com.restaurant_management.restaurant_management_backend.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.exceptions.UnauthorizedException;
@@ -153,27 +156,27 @@ public class OrderServiceImpl implements OrderService {
 
   @Override
   @Transactional
-  public OrderDTO payOrder(Long orderId, TransactionDTO transactionDTO) {
+  public OrderDTO payOrder(Long orderId, PaymentMethodType paymentMethodType, User user) {
     Order order = orderRepository.findById(orderId)
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
     
-    // Get current authenticated user
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      throw new UnauthorizedException("Usuario no autenticado");
+    // Validar que no haya pagos previos - si ya está PARTIALLY_PAID debe usar el endpoint de pago parcial
+    if (order.getStatus() == OrderStatus.PARTIALLY_PAID) {
+        throw new IllegalStateException(
+            "Esta orden tiene pagos parciales previos. Use el endpoint de pago parcial para completar el pago."
+        );
     }
-    
-    String userEmail = authentication.getName();
-    User user = userRepository.findByEmail(userEmail)
-      .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     
     order.markAsPaid();
     
+    User currentUser = userRepository.findById(user.getId())
+      .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
     Transaction transaction = Transaction.builder()
         .order(order)
-        .user(user)
+        .user(currentUser)
         .total(order.getTotal())
-        .paymentMethod(transactionDTO.getPaymentMethod())
+        .paymentMethod(paymentMethodType)
         .status(TransactionStatus.COMPLETED)
         .transactionDate(LocalDateTime.now())
         .build();
@@ -184,6 +187,60 @@ public class OrderServiceImpl implements OrderService {
         Table table = order.getTable();
         table.free();
         tableRepository.save(table);
+    }
+    
+    return orderMapper.toDto(orderRepository.save(order));
+  }
+
+  @Override
+  @Transactional
+  public OrderDTO payPartialOrder(Long orderId, PartialPaymentDTO paymentDTO, User user) {
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+    
+    // Validar estado de la orden
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PARTIALLY_PAID) {
+        throw new IllegalStateException("La orden no puede recibir pagos en este estado: " + order.getStatus());
+    }
+    
+    // Validar que el monto no exceda el resto por pagar
+    BigDecimal remainingAmount = order.getRemainingAmount();
+    if (paymentDTO.getAmount().compareTo(remainingAmount) > 0) {
+        throw new IllegalArgumentException("El monto a pagar (" + paymentDTO.getAmount() + 
+            ") excede el monto restante (" + remainingAmount + ")");
+    }
+    
+    // Crear la transacción
+    User currentUser = userRepository.findById(user.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+    Transaction transaction = Transaction.builder()
+        .order(order)
+        .user(currentUser)
+        .total(paymentDTO.getAmount())
+        .paymentMethod(paymentDTO.getPaymentMethod())
+        .status(TransactionStatus.COMPLETED)
+        .transactionDate(LocalDateTime.now())
+        .build();
+    
+    transactionRepository.save(transaction);
+    
+    // Calcular si la orden está completamente pagada sumando el nuevo pago
+    BigDecimal totalPaid = order.getPaidAmount().add(paymentDTO.getAmount());
+    boolean isFullyPaid = totalPaid.compareTo(order.getTotal()) >= 0;
+    
+    // Actualizar el estado de la orden
+    if (isFullyPaid) {
+        order.setStatus(OrderStatus.PAID);
+        
+        // Liberar mesa si está completamente pagado y es DINE_IN
+        if (order.getType() == OrderType.DINE_IN) {
+            Table table = order.getTable();
+            table.free();
+            tableRepository.save(table);
+        }
+    } else {
+        order.setStatus(OrderStatus.PARTIALLY_PAID);
     }
     
     return orderMapper.toDto(orderRepository.save(order));
