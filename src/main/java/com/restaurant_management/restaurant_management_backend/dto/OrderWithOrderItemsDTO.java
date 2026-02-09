@@ -25,4 +25,11 @@ public class OrderWithOrderItemsDTO {
   private BigDecimal total;
 
   private List<OrderItemDTO> items;
+  
+  // Campos para pagos parciales
+  private BigDecimal paidAmount;
+  private BigDecimal remainingAmount;
+  
+  // Lista de transacciones completadas
+  private List<TransactionDTO> transactions;
 }
