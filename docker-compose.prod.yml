@@ -1,0 +1,21 @@
+services:
+  db-prod:
+    image: postgres:17-alpine
+    container_name: ddbb_restaurant_management_prod
+    environment:
+      POSTGRES_DB: ddbb_restaurant_management_prod
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres 
+    volumes:
+      - pgdataprod:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdataprod:

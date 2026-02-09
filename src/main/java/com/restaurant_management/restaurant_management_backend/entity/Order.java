@@ -3,6 +3,7 @@ package com.restaurant_management.restaurant_management_backend.entity;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
 import com.restaurant_management.restaurant_management_backend.enums.TableStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
+import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -104,10 +105,32 @@ public class Order {
   }
 
   public void markAsPaid() {
-    if (this.status != OrderStatus.CREATED) {
+    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.PARTIALLY_PAID) {
         throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
     }
     this.status = OrderStatus.PAID;
+  }
+
+  // Métodos para pagos parciales
+  public BigDecimal getPaidAmount() {
+    return transactions.stream()
+        .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
+        .map(Transaction::getTotal)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  public BigDecimal getRemainingAmount() {
+    return this.total.subtract(getPaidAmount());
+  }
+
+  public boolean isFullyPaid() {
+    return getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0;
+  }
+
+  public boolean isPartiallyPaid() {
+    BigDecimal paid = getPaidAmount();
+    return paid.compareTo(BigDecimal.ZERO) > 0 && 
+           paid.compareTo(this.total) < 0;
   }
 
 }

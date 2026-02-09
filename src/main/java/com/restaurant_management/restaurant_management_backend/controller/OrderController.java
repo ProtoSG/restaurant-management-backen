@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,7 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.restaurant_management.restaurant_management_backend.dto.OrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderTypeDTO;
+import com.restaurant_management.restaurant_management_backend.dto.PartialPaymentDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
+import com.restaurant_management.restaurant_management_backend.entity.User;
+import com.restaurant_management.restaurant_management_backend.enums.PaymentMethodType;
 import com.restaurant_management.restaurant_management_backend.service.OrderService;
 
 import jakarta.validation.Valid;
@@ -94,13 +98,25 @@ public class OrderController {
     return ResponseEntity.noContent().build();
   }
 
-  @PostMapping("/{id}/pay")
+  @PostMapping("/{id}/pay/{paymentMethod}")
   public ResponseEntity<?> payOrder(
       @PathVariable Long id,
-      @RequestBody @Valid TransactionDTO transactionDTO
+      @PathVariable PaymentMethodType paymentMethod,
+      @AuthenticationPrincipal User user
   ) {
-    OrderDTO orderDTO = orderService.payOrder(id, transactionDTO);
-    
+    OrderDTO orderDTO = orderService.payOrder(id, paymentMethod, user);
+
+    return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
+  }
+
+  @PostMapping("/{id}/pay-partial")
+  public ResponseEntity<?> payPartialOrder(
+      @PathVariable Long id,
+      @RequestBody @Valid PartialPaymentDTO paymentDTO,
+      @AuthenticationPrincipal User user
+  ) {
+    OrderDTO orderDTO = orderService.payPartialOrder(id, paymentDTO, user);
+
     return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
   }
 

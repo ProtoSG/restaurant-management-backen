@@ -31,4 +31,9 @@ public class OrderDTO {
 
   private BigDecimal total;
 
+  // Campos para pagos parciales
+  private BigDecimal paidAmount;
+  
+  private BigDecimal remainingAmount;
+
 }
