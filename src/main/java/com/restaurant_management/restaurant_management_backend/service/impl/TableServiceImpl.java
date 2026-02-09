@@ -11,6 +11,7 @@ import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderWithOrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TableDTO;
+import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
 import com.restaurant_management.restaurant_management_backend.dto.UpdateOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.entity.Order;
 import com.restaurant_management.restaurant_management_backend.entity.OrderItem;
@@ -19,10 +20,12 @@ import com.restaurant_management.restaurant_management_backend.entity.Table;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
 import com.restaurant_management.restaurant_management_backend.enums.TableStatus;
+import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 import com.restaurant_management.restaurant_management_backend.exceptions.BadRequestException;
 import com.restaurant_management.restaurant_management_backend.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.mapper.ProductMapper;
 import com.restaurant_management.restaurant_management_backend.mapper.TableMapper;
+import com.restaurant_management.restaurant_management_backend.mapper.TransactionMapper;
 import com.restaurant_management.restaurant_management_backend.repository.OrderItemRepository;
 import com.restaurant_management.restaurant_management_backend.repository.OrderRepository;
 import com.restaurant_management.restaurant_management_backend.repository.ProductRepository;
@@ -44,6 +47,7 @@ public class TableServiceImpl implements TableService {
   private final ProductRepository productRepository;
   private final OrderItemRepository orderItemRepository;
   private final ProductMapper productMapper;
+  private final TransactionMapper transactionMapper;
 
   public TableDTO save(TableDTO tableDTO) {
     Table newTable = tableMapper.toEntity(tableDTO);
@@ -52,7 +56,7 @@ public class TableServiceImpl implements TableService {
   }
 
   public List<TableDTO> findAll() {
-    List<Table> tables = tableRepository.findAll();
+    List<Table> tables = tableRepository.findAllOrderedByNumberNumeric();
 
     return tables.stream()
       .map(tableMapper::toDto)
@@ -104,6 +108,15 @@ public class TableServiceImpl implements TableService {
         .toList();
     }
     
+    // Obtener transacciones completadas
+    List<TransactionDTO> transactions = new ArrayList<>();
+    if (activeOrder.getTransactions() != null) {
+      transactions = activeOrder.getTransactions().stream()
+        .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
+        .map(transactionMapper::toDto)
+        .toList();
+    }
+    
     return OrderWithOrderItemsDTO.builder()
       .id(activeOrder.getId())
       .orderCode(activeOrder.getOrderCode())
@@ -111,6 +124,9 @@ public class TableServiceImpl implements TableService {
       .type(activeOrder.getType())
       .total(activeOrder.getTotal())
       .items(items)
+      .paidAmount(activeOrder.getPaidAmount())
+      .remainingAmount(activeOrder.getRemainingAmount())
+      .transactions(transactions)
       .build();
   }
 
@@ -207,13 +223,28 @@ public class TableServiceImpl implements TableService {
     Product product = productRepository.findById(request.getProductId())
       .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
-    OrderItem orderItem = new OrderItem();
-    orderItem.assignProductCustomPrice(product, null, request.getQuantity());
-    orderItem.setOrder(activeOrder);
+    // Buscar si ya existe un OrderItem con este producto en la orden activa
+    Optional<OrderItem> existingOrderItem = activeOrder.getItems().stream()
+      .filter(item -> item.getProduct().getId().equals(request.getProductId()))
+      .findFirst();
+
+    OrderItem orderItem;
+    if (existingOrderItem.isPresent()) {
+      // Si existe, actualizar la cantidad
+      orderItem = existingOrderItem.get();
+      orderItem.setQuantity(orderItem.getQuantity() + request.getQuantity());
+      orderItem.calculateSubTotal();
+    } else {
+      // Si no existe, crear un nuevo OrderItem
+      orderItem = new OrderItem();
+      orderItem.assignProductCustomPrice(product, null, request.getQuantity());
+      orderItem.setOrder(activeOrder);
+      activeOrder.addItem(orderItem);
+    }
 
     OrderItem savedOrderItem = orderItemRepository.save(orderItem);
 
-    activeOrder.addItem(savedOrderItem);
+    activeOrder.calculateTotal();
     orderRepository.save(activeOrder);
 
     return OrderItemDTO.builder()
