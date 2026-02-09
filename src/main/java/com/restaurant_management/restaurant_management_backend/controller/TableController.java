@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant_management.restaurant_management_backend.dto.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
-import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderWithOrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TableDTO;
 import com.restaurant_management.restaurant_management_backend.dto.UpdateOrderItemRequest;

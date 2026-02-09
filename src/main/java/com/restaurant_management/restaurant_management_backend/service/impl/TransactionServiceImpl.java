@@ -1,6 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
+import com.restaurant_management.restaurant_management_backend.dto.TransactionMountGroupByPaymentMethodDTO;
 import com.restaurant_management.restaurant_management_backend.entity.Order;
 import com.restaurant_management.restaurant_management_backend.entity.Transaction;
 import com.restaurant_management.restaurant_management_backend.entity.User;
@@ -17,13 +19,13 @@ import com.restaurant_management.restaurant_management_backend.mapper.Transactio
 import com.restaurant_management.restaurant_management_backend.repository.OrderRepository;
 import com.restaurant_management.restaurant_management_backend.repository.TransactionRepository;
 import com.restaurant_management.restaurant_management_backend.repository.UserRepository;
-import com.restaurant_management.restaurant_management_backend.service.TransactionServide;
+import com.restaurant_management.restaurant_management_backend.service.TransactionService;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class TransactionServiceImpl implements TransactionServide {
+public class TransactionServiceImpl implements TransactionService {
 
   private final TransactionRepository transactionRepository;
   private final OrderRepository orderRepository;
@@ -39,8 +41,8 @@ public class TransactionServiceImpl implements TransactionServide {
       throw new UnauthorizedException("Usuario no autenticado");
     }
     
-    String userEmail = authentication.getName();
-    User user = userRepository.findByEmail(userEmail)
+    String username = authentication.getName();
+    User user = userRepository.findByUsername(username)
       .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
     // Get order
@@ -61,6 +63,11 @@ public class TransactionServiceImpl implements TransactionServide {
     Transaction savedTransaction = transactionRepository.save(transaction);
     
     return transactionMapper.toDto(savedTransaction);
+  }
+
+  @Override
+  public List<TransactionMountGroupByPaymentMethodDTO> getTotalAmountGroupedByPaymentMethod() {
+    return transactionRepository.getTotalAmountGroupedByPaymentMethod();
   }
   
 }
