@@ -6,10 +6,14 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.restaurant_management.restaurant_management_backend.dto.ActiveOrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.AddOrderItemRequest;
+import com.restaurant_management.restaurant_management_backend.dto.CategoryDTO;
+import com.restaurant_management.restaurant_management_backend.dto.OrderItemActiveOrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderWithOrderItemsDTO;
+import com.restaurant_management.restaurant_management_backend.dto.ProductActiveOrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TableDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
 import com.restaurant_management.restaurant_management_backend.dto.UpdateOrderItemRequest;
@@ -23,6 +27,7 @@ import com.restaurant_management.restaurant_management_backend.enums.TableStatus
 import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 import com.restaurant_management.restaurant_management_backend.exceptions.BadRequestException;
 import com.restaurant_management.restaurant_management_backend.exceptions.ResourceNotFoundException;
+import com.restaurant_management.restaurant_management_backend.mapper.CategoryMapper;
 import com.restaurant_management.restaurant_management_backend.mapper.ProductMapper;
 import com.restaurant_management.restaurant_management_backend.mapper.TableMapper;
 import com.restaurant_management.restaurant_management_backend.mapper.TransactionMapper;
@@ -48,6 +53,7 @@ public class TableServiceImpl implements TableService {
   private final OrderItemRepository orderItemRepository;
   private final ProductMapper productMapper;
   private final TransactionMapper transactionMapper;
+  private final CategoryMapper categoryMapper;
 
   public TableDTO save(TableDTO tableDTO) {
     Table newTable = tableMapper.toEntity(tableDTO);
@@ -87,24 +93,33 @@ public class TableServiceImpl implements TableService {
     tableRepository.deleteById(id);
   }
 
-  public OrderWithOrderItemsDTO getActiveOrder(Long id) {
+  @Transactional
+  public ActiveOrderDTO getActiveOrder(Long id) {
     tableRepository.findById(id)
       .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
     
     Order activeOrder = orderRepository.findActiveOrderByTableId(id)
       .orElseThrow(() -> new ResourceNotFoundException("No hay orden activa para esta mesa"));
 
-    List<OrderItemDTO> items = new ArrayList<>();
+    List<OrderItemActiveOrderDTO> items = new ArrayList<>();
 
     if (activeOrder.getItems() != null) {
       items = activeOrder.getItems().stream()
-        .map(orderItem -> OrderItemDTO.builder()
-          .id(orderItem.getId())
-          .quantity(orderItem.getQuantity())
-          .subTotal(orderItem.getSubTotal())
-          .productId(orderItem.getProduct().getId())
-          .product(productMapper.toDto(orderItem.getProduct()))
-          .build())
+        .map(orderItem -> {
+          ProductActiveOrderDTO productActiveOrder = ProductActiveOrderDTO.builder()
+            .id(orderItem.getProduct().getId())
+            .name(orderItem.getProduct().getName())
+            .price(orderItem.getProduct().getPrice())
+            .category(categoryMapper.toDto(orderItem.getProduct().getCategory()))
+            .build();
+
+          return OrderItemActiveOrderDTO.builder()
+            .id(orderItem.getId())
+            .quantity(orderItem.getQuantity())
+            .subTotal(orderItem.getSubTotal())
+            .product(productActiveOrder)
+            .build();
+        })
         .toList();
     }
     
@@ -117,7 +132,7 @@ public class TableServiceImpl implements TableService {
         .toList();
     }
     
-    return OrderWithOrderItemsDTO.builder()
+    return ActiveOrderDTO.builder()
       .id(activeOrder.getId())
       .orderCode(activeOrder.getOrderCode())
       .status(activeOrder.getStatus())
@@ -245,6 +260,9 @@ public class TableServiceImpl implements TableService {
     OrderItem savedOrderItem = orderItemRepository.save(orderItem);
 
     activeOrder.calculateTotal();
+    if (activeOrder.getStatus() == OrderStatus.CREATED) {
+      activeOrder.setStatus(OrderStatus.IN_PROGRESS);
+    }
     orderRepository.save(activeOrder);
 
     return OrderItemDTO.builder()
@@ -268,9 +286,10 @@ public class TableServiceImpl implements TableService {
       throw new BadRequestException("El item no pertenece a la mesa especificada");
     }
 
-    if (orderItem.getOrder().getStatus() != OrderStatus.CREATED && 
+    if (orderItem.getOrder().getStatus() != OrderStatus.CREATED &&
+        orderItem.getOrder().getStatus() != OrderStatus.IN_PROGRESS &&
         orderItem.getOrder().getStatus() != OrderStatus.PENDING) {
-      throw new BadRequestException("No se puede modificar una orden que no está en estado CREATED o PENDING");
+      throw new BadRequestException("No se puede modificar una orden que no está en estado CREATED, IN_PROGRESS o PENDING");
     }
 
     orderItem.setQuantity(request.getQuantity());
@@ -303,17 +322,21 @@ public class TableServiceImpl implements TableService {
       throw new BadRequestException("El item no pertenece a la mesa especificada");
     }
 
-    if (orderItem.getOrder().getStatus() != OrderStatus.CREATED && 
+    if (orderItem.getOrder().getStatus() != OrderStatus.CREATED &&
+        orderItem.getOrder().getStatus() != OrderStatus.IN_PROGRESS &&
         orderItem.getOrder().getStatus() != OrderStatus.PENDING) {
-      throw new BadRequestException("No se puede modificar una orden que no está en estado CREATED o PENDING");
+      throw new BadRequestException("No se puede modificar una orden que no está en estado CREATED, IN_PROGRESS o PENDING");
     }
 
     Order order = orderItem.getOrder();
     order.removeItem(orderItem);
-    
+
     orderItemRepository.delete(orderItem);
-    
+
     order.calculateTotal();
+    if (order.getStatus() == OrderStatus.IN_PROGRESS && order.getItems().isEmpty()) {
+      order.setStatus(OrderStatus.CREATED);
+    }
     orderRepository.save(order);
   }
 }
