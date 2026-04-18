@@ -2,7 +2,6 @@ package com.restaurant_management.restaurant_management_backend;
 
 import java.math.BigDecimal;
 
-import org.aspectj.weaver.bcel.UnwovenClassFile.ChildClass;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 

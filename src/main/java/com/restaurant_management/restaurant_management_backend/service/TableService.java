@@ -2,6 +2,7 @@ package com.restaurant_management.restaurant_management_backend.service;
 
 import java.util.List;
 
+import com.restaurant_management.restaurant_management_backend.dto.ActiveOrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
@@ -17,7 +18,7 @@ public interface TableService {
   public TableDTO update(Long id, TableDTO tableDTO);
   public void deleteById(Long id);
   public OrderWithOrderItemsDTO saveOrder(Long id);
-  public OrderWithOrderItemsDTO getActiveOrder(Long id);
+  public ActiveOrderDTO getActiveOrder(Long id);
   public void addProducts(Long id, OrderItemsDTO items);
   public OrderItemDTO addOrderItem(Long tableId, AddOrderItemRequest request);
   public OrderItemDTO updateOrderItem(Long tableId, Long itemId, UpdateOrderItemRequest request);

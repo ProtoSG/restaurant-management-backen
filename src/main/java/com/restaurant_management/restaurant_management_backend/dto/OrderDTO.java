@@ -1,6 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
@@ -22,10 +23,13 @@ public class OrderDTO {
 
   private String orderCode;
 
-  @NotNull(message = "La mesa es obligatoria")
   private Long tableId;
 
+  private String tableNumber;
+
   private OrderType type;
+
+  private String customerName;
 
   private OrderStatus status;
 
@@ -35,5 +39,7 @@ public class OrderDTO {
   private BigDecimal paidAmount;
   
   private BigDecimal remainingAmount;
+
+  private List<OrderItemDTO> items;
 
 }

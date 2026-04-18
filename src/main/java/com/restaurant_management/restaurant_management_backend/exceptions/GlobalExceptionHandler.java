@@ -120,4 +120,26 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
   }
 
+  @ExceptionHandler(IllegalStateException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException exception) {
+    ErrorResponse errorResponse = new ErrorResponse(
+      exception.getMessage(),
+      HttpStatus.CONFLICT.value(),
+      "Estado inválido"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+  }
+
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception) {
+    ErrorResponse errorResponse = new ErrorResponse(
+      exception.getMessage(),
+      HttpStatus.BAD_REQUEST.value(),
+      "Argumento inválido"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+  }
+
 }

@@ -2,6 +2,7 @@ package com.restaurant_management.restaurant_management_backend.controller;
 
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -27,7 +28,17 @@ public class AuthController {
 
   private final AuthService authService;
 
+  @Value("${cookie.secure:false}")
+  private boolean cookieSecure;
+
+  @Value("${cookie.same-site:Lax}")
+  private String cookieSameSite;
+
+  @Value("${application.security.jwt.expiration:86400000}")
+  private long accessTokenExpiration;
+
   private static final String REFRESH_TOKEN = "refresh_token";
+  private static final String ACCESS_TOKEN = "access_token";
 
   @PostMapping("/login")
   public ResponseEntity<?> login(
@@ -35,15 +46,24 @@ public class AuthController {
   ) {
     AuthResponseDTO responseDTO = authService.login(requestDTO);
 
+    ResponseCookie accessToken = ResponseCookie.from(ACCESS_TOKEN, responseDTO.getToken())
+      .httpOnly(true)
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/")
+      .maxAge(Duration.ofMillis(accessTokenExpiration))
+      .build();
+
     ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN, responseDTO.getRefreshToken())
       .httpOnly(true)
-      .secure(false)
-      .sameSite("Lax")
-      .path("/api/auth")
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/api/auth/refresh")
       .maxAge(Duration.ofDays(7))
       .build();
 
     return ResponseEntity.status(HttpStatus.OK)
+      .header(HttpHeaders.SET_COOKIE, accessToken.toString())
       .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
       .body(responseDTO);
   }
@@ -54,34 +74,52 @@ public class AuthController {
   ) {
     AuthResponseDTO responseDTO = authService.register(userCreateDTO);
 
+    ResponseCookie accessToken = ResponseCookie.from(ACCESS_TOKEN, responseDTO.getToken())
+      .httpOnly(true)
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/")
+      .maxAge(Duration.ofMillis(accessTokenExpiration))
+      .build();
+
     ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN, responseDTO.getRefreshToken())
       .httpOnly(true)
-      .secure(false)
-      .sameSite("Lax")
-      .path("/api/auth")
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/api/auth/refresh")
       .maxAge(Duration.ofDays(7))
       .build();
 
     return ResponseEntity.status(HttpStatus.CREATED)
+      .header(HttpHeaders.SET_COOKIE, accessToken.toString())
       .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
       .body(responseDTO);
   }
 
   @PostMapping("/refresh")
   public ResponseEntity<?> refresh(
-      @CookieValue(value = REFRESH_TOKEN, required = false) String refreshToken
+      @CookieValue(value = REFRESH_TOKEN) String refreshToken
   ) {
     AuthResponseDTO responseDTO = authService.refreshToken(refreshToken);
 
+    ResponseCookie accessToken = ResponseCookie.from(ACCESS_TOKEN, responseDTO.getToken())
+      .httpOnly(true)
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/")
+      .maxAge(Duration.ofMillis(accessTokenExpiration))
+      .build();
+
     ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN, responseDTO.getRefreshToken())
       .httpOnly(true)
-      .secure(false)
-      .sameSite("Lax")
-      .path("/api/auth")
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/api/auth/refresh")
       .maxAge(Duration.ofDays(7))
       .build();
 
     return ResponseEntity.status(HttpStatus.OK)
+      .header(HttpHeaders.SET_COOKIE, accessToken.toString())
       .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
       .body(responseDTO);
   }
