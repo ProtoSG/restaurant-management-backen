@@ -3,35 +3,40 @@ package com.restaurant_management.restaurant_management_backend.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.restaurant_management.restaurant_management_backend.dto.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.dto.OrderDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderItemsDTO;
 import com.restaurant_management.restaurant_management_backend.dto.OrderTypeDTO;
 import com.restaurant_management.restaurant_management_backend.dto.PartialPaymentDTO;
 import com.restaurant_management.restaurant_management_backend.dto.TransactionDTO;
+import com.restaurant_management.restaurant_management_backend.dto.UpdateOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.entity.Order;
 import com.restaurant_management.restaurant_management_backend.entity.OrderItem;
 import com.restaurant_management.restaurant_management_backend.entity.Product;
 import com.restaurant_management.restaurant_management_backend.entity.Table;
+import com.restaurant_management.restaurant_management_backend.entity.TableTransferAudit;
 import com.restaurant_management.restaurant_management_backend.entity.Transaction;
 import com.restaurant_management.restaurant_management_backend.entity.User;
 import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.enums.OrderType;
 import com.restaurant_management.restaurant_management_backend.enums.PaymentMethodType;
 import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
+import com.restaurant_management.restaurant_management_backend.exceptions.BadRequestException;
 import com.restaurant_management.restaurant_management_backend.exceptions.ResourceNotFoundException;
-import com.restaurant_management.restaurant_management_backend.exceptions.UnauthorizedException;
+import com.restaurant_management.restaurant_management_backend.mapper.OrderItemMapper;
 import com.restaurant_management.restaurant_management_backend.mapper.OrderMapper;
+import com.restaurant_management.restaurant_management_backend.mapper.ProductMapper;
 import com.restaurant_management.restaurant_management_backend.repository.OrderItemRepository;
 import com.restaurant_management.restaurant_management_backend.repository.OrderRepository;
 import com.restaurant_management.restaurant_management_backend.repository.ProductRepository;
 import com.restaurant_management.restaurant_management_backend.repository.TableRepository;
+import com.restaurant_management.restaurant_management_backend.repository.TableTransferAuditRepository;
 import com.restaurant_management.restaurant_management_backend.repository.TransactionRepository;
 import com.restaurant_management.restaurant_management_backend.repository.UserRepository;
 import com.restaurant_management.restaurant_management_backend.service.OrderCodeService;
@@ -50,28 +55,41 @@ public class OrderServiceImpl implements OrderService {
   private final TransactionRepository transactionRepository;
   private final OrderCodeService orderCodeService;
   private final UserRepository userRepository;
+  private final TableTransferAuditRepository tableTransferAuditRepository;
 
   private final OrderMapper orderMapper;
+  private final OrderItemMapper orderItemMapper;
+  private final ProductMapper productMapper;
 
   @Transactional
   public OrderDTO save(OrderDTO orderDTO) {
+    if (orderDTO.getType() == null) {
+      throw new IllegalArgumentException("El tipo de orden es obligatorio");
+    }
+
     String orderCode = orderCodeService.generateNextOrderCode();
     
     Order newOrder = Order.builder()
         .orderCode(orderCode)
+        .type(orderDTO.getType())
+        .customerName(orderDTO.getCustomerName())
         .build();
 
-    Table table = tableRepository.findById(orderDTO.getTableId())
-        .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
-
-    newOrder.assignToTable(table);
+    if (orderDTO.getType() == OrderType.DINE_IN) {
+      if (orderDTO.getTableId() == null) {
+        throw new IllegalArgumentException("La mesa es obligatoria para pedidos en mesa");
+      }
+      Table table = tableRepository.findById(orderDTO.getTableId())
+          .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
+      newOrder.assignToTable(table);
+    }
 
     return orderMapper.toDto(orderRepository.save(newOrder));
   }
 
   @Transactional(readOnly = true)
   public OrderDTO findById(Long id) {
-    Order order = orderRepository.findById(id)
+    Order order = orderRepository.findByIdWithDetails(id)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
     return orderMapper.toDto(order);
@@ -98,17 +116,28 @@ public class OrderServiceImpl implements OrderService {
   }
 
   @Transactional
-  public OrderDTO changeTable(Long orderId, Long tableId) {
+  public OrderDTO changeTable(Long orderId, Long tableId, User user) {
     Order order = orderRepository.findById(orderId)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
     Table oldTable = order.getTable();
     oldTable.free();
 
-    Table table = tableRepository.findById(tableId)
+    Table newTable = tableRepository.findById(tableId)
       .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
 
-    order.assignToTable(table);
+    order.assignToTable(newTable);
+
+    TableTransferAudit audit = TableTransferAudit.builder()
+      .order(order)
+      .fromTable(oldTable)
+      .toTable(newTable)
+      .user(user)
+      .orderTotal(order.getTotal())
+      .transferDate(LocalDateTime.now())
+      .build();
+
+    tableTransferAuditRepository.save(audit);
 
     return orderMapper.toDto(orderRepository.save(order));
   }
@@ -129,6 +158,12 @@ public class OrderServiceImpl implements OrderService {
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
     order.setStatus(OrderStatus.CANCELLED);
+
+    if (order.getType() == OrderType.DINE_IN && order.getTable() != null) {
+      Table table = order.getTable();
+      table.free();
+      tableRepository.save(table);
+    }
 
     return orderMapper.toDto(orderRepository.save(order));
   }
@@ -152,6 +187,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     orderRepository.save(order);
+  }
+
+  @Override
+  @Transactional
+  public OrderDTO markAsReady(Long orderId) {
+    Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+    order.markAsReady();
+    return orderMapper.toDto(orderRepository.save(order));
   }
 
   @Override
@@ -199,8 +243,9 @@ public class OrderServiceImpl implements OrderService {
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
     
     // Validar estado de la orden
-    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PARTIALLY_PAID) {
-        throw new IllegalStateException("La orden no puede recibir pagos en este estado: " + order.getStatus());
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.READY
+        && order.getStatus() != OrderStatus.PARTIALLY_PAID) {
+      throw new IllegalStateException("La orden no puede recibir pagos en este estado: " + order.getStatus());
     }
     
     // Validar que el monto no exceda el resto por pagar
@@ -244,6 +289,120 @@ public class OrderServiceImpl implements OrderService {
     }
     
     return orderMapper.toDto(orderRepository.save(order));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<OrderDTO> findActiveOrder() {
+    List<Order> orders = orderRepository.findActiveOrder();
+
+    return orders.stream()
+      .map(orderMapper::toDto)
+      .toList();
+  }
+
+  @Override
+  @Transactional
+  public OrderItemDTO addOrderItemByOrderId(Long orderId, AddOrderItemRequest request) {
+    Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS) {
+      throw new BadRequestException("No se puede agregar items a un pedido que no está en estado CREATED o IN_PROGRESS");
+    }
+
+    Product product = productRepository.findById(request.getProductId())
+      .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+    Optional<OrderItem> existingOrderItem = order.getItems().stream()
+      .filter(item -> item.getProduct().getId().equals(request.getProductId()))
+      .findFirst();
+
+    OrderItem orderItem;
+    if (existingOrderItem.isPresent()) {
+      orderItem = existingOrderItem.get();
+      orderItem.setQuantity(orderItem.getQuantity() + request.getQuantity());
+      orderItem.calculateSubTotal();
+    } else {
+      orderItem = new OrderItem();
+      orderItem.assignProductCustomPrice(product, null, request.getQuantity());
+      orderItem.setOrder(order);
+      order.addItem(orderItem);
+    }
+
+    OrderItem savedOrderItem = orderItemRepository.save(orderItem);
+    order.calculateTotal();
+    if (order.getStatus() == OrderStatus.CREATED) {
+      order.setStatus(OrderStatus.IN_PROGRESS);
+    }
+    orderRepository.save(order);
+
+    return OrderItemDTO.builder()
+      .id(savedOrderItem.getId())
+      .quantity(savedOrderItem.getQuantity())
+      .subTotal(savedOrderItem.getSubTotal())
+      .productId(savedOrderItem.getProduct().getId())
+      .product(productMapper.toDto(savedOrderItem.getProduct()))
+      .build();
+  }
+
+  @Override
+  @Transactional
+  public OrderItemDTO updateOrderItemByOrderId(Long orderId, Long itemId, UpdateOrderItemRequest request) {
+    Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+    OrderItem orderItem = orderItemRepository.findById(itemId)
+      .orElseThrow(() -> new ResourceNotFoundException("Item de orden no encontrado"));
+
+    if (!orderItem.getOrder().getId().equals(orderId)) {
+      throw new BadRequestException("El item no pertenece al pedido especificado");
+    }
+
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS) {
+      throw new BadRequestException("No se puede modificar un pedido que no está en estado CREATED o IN_PROGRESS");
+    }
+
+    orderItem.setQuantity(request.getQuantity());
+    orderItem.calculateSubTotal();
+
+    OrderItem updatedOrderItem = orderItemRepository.save(orderItem);
+    order.calculateTotal();
+    orderRepository.save(order);
+
+    return OrderItemDTO.builder()
+      .id(updatedOrderItem.getId())
+      .quantity(updatedOrderItem.getQuantity())
+      .subTotal(updatedOrderItem.getSubTotal())
+      .productId(updatedOrderItem.getProduct().getId())
+      .product(productMapper.toDto(updatedOrderItem.getProduct()))
+      .build();
+  }
+
+  @Override
+  @Transactional
+  public void removeOrderItemByOrderId(Long orderId, Long itemId) {
+    Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+    OrderItem orderItem = orderItemRepository.findById(itemId)
+      .orElseThrow(() -> new ResourceNotFoundException("Item de orden no encontrado"));
+
+    if (!orderItem.getOrder().getId().equals(orderId)) {
+      throw new BadRequestException("El item no pertenece al pedido especificado");
+    }
+
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS) {
+      throw new BadRequestException("No se puede eliminar items de un pedido que no está en estado CREATED o IN_PROGRESS");
+    }
+
+    order.removeItem(orderItem);
+    orderItemRepository.delete(orderItem);
+    order.calculateTotal();
+    if (order.getStatus() == OrderStatus.IN_PROGRESS && order.getItems().isEmpty()) {
+      order.setStatus(OrderStatus.CREATED);
+    }
+    orderRepository.save(order);
   }
 
 }
