@@ -55,6 +55,7 @@ public class AuthServiceImpl implements AuthService {
 
     return AuthResponseDTO.builder()
       .username(user.getUsername())
+      .role(user.getRole().getName())
       .token(jwtToken)
       .refreshToken(refreshToken)
       .build();
@@ -86,6 +87,7 @@ public class AuthServiceImpl implements AuthService {
 
     AuthResponseDTO responseDTO = AuthResponseDTO.builder()
       .username(userCreateDTO.getUsername())
+      .role(savedUser.getRole().getName())
       .token(jwtToken)
       .refreshToken(refreshToken)
       .build();
@@ -116,6 +118,7 @@ public class AuthServiceImpl implements AuthService {
 
     return AuthResponseDTO.builder()
       .username(user.getUsername())
+      .role(user.getRole().getName())
       .token(accessToken)
       .refreshToken(newRefreshToken)
       .build();

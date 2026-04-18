@@ -29,4 +29,6 @@ public class ProductDTO {
   @NotNull(message = "La categoria es obligatorio")
   private Long categoryId;
 
+  private CategoryDTO category;
+
 }

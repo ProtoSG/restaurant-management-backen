@@ -1,30 +1,36 @@
 package com.restaurant_management.restaurant_management_backend.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.restaurant_management.restaurant_management_backend.enums.RoleName;
-import com.restaurant_management.restaurant_management_backend.exceptions.UnauthorizedException;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
   private final JwtAuthFilter jwtAuthFilter;
   private final AuthenticationProvider authenticationProvider;
+
+  @Value("${cookie.secure:false}")
+  private boolean cookieSecure;
+
+  @Value("${cookie.same-site:Lax}")
+  private String cookieSameSite;
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -42,10 +48,9 @@ public class SecurityConfig {
         logout.logoutUrl("/auth/logout")
         .permitAll()
         .addLogoutHandler((request, response, authentication) -> {
-          final var authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-          logout(authHeader, request, response);
+          logout(request, response);
         })
-        .logoutSuccessHandler((request, response, authentication) -> 
+        .logoutSuccessHandler((request, response, authentication) ->
           SecurityContextHolder.clearContext()
         )
       );
@@ -53,18 +58,24 @@ public class SecurityConfig {
     return http.build();
   }
 
-  private void logout(final String authHeader, HttpServletRequest request, HttpServletResponse response) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-      throw new UnauthorizedException("token invalid");
-    }
-    ResponseCookie cleared = ResponseCookie.from("refresh_token", "")
+  private void logout(HttpServletRequest request, HttpServletResponse response) {
+    ResponseCookie clearedAccessToken = ResponseCookie.from("access_token", "")
       .httpOnly(true)
-      .secure(false) //NOTE: cambiar en produccion(True)
-      .sameSite("Lax") //NOTE: cambiar en produccion(None)
-      .path("/api/auth")
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/")
       .maxAge(0)
       .build();
 
-    response.addHeader(HttpHeaders.SET_COOKIE, cleared.toString());
+    ResponseCookie clearedRefreshToken = ResponseCookie.from("refresh_token", "")
+      .httpOnly(true)
+      .secure(cookieSecure)
+      .sameSite(cookieSameSite)
+      .path("/api/auth/refresh")
+      .maxAge(0)
+      .build();
+
+    response.addHeader(HttpHeaders.SET_COOKIE, clearedAccessToken.toString());
+    response.addHeader(HttpHeaders.SET_COOKIE, clearedRefreshToken.toString());
   }
 }

@@ -12,4 +12,7 @@ public interface TableRepository extends JpaRepository<Table, Long> {
   @Query("SELECT t FROM Table t ORDER BY CAST(t.number AS int) ASC")
   List<Table> findAllOrderedByNumberNumeric();
 
+  @Query("SELECT COUNT(t) FROM Table t WHERE t.status = 'OCCUPIED'")
+  Long countOccupiedTables();
+
 }
