@@ -138,6 +138,13 @@ public class Order {
     this.status = OrderStatus.READY;
   }
 
+  public void markAsPending() {
+    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.IN_PROGRESS) {
+      throw new IllegalStateException("Solo órdenes CREATED o IN_PROGRESS pueden marcarse como pendientes");
+    }
+    this.status = OrderStatus.PENDING;
+  }
+
   // Métodos para pagos parciales
   public BigDecimal getPaidAmount() {
     return transactions.stream()

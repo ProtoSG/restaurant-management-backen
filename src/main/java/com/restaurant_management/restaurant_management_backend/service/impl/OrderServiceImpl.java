@@ -213,6 +213,15 @@ public class OrderServiceImpl implements OrderService {
 
   @Override
   @Transactional
+  public OrderDTO markAsPending(Long orderId) {
+    Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+    order.markAsPending();
+    return orderMapper.toDto(orderRepository.save(order));
+  }
+
+  @Override
+  @Transactional
   public OrderDTO payOrder(Long orderId, PaymentMethodType paymentMethodType, User user) {
     Order order = orderRepository.findById(orderId)
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
