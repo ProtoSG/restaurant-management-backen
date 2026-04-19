@@ -159,6 +159,13 @@ public class OrderController {
     return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
   }
 
+  @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'WAITER')")
+  @PostMapping("/{id}/pending")
+  public ResponseEntity<?> markAsPending(@PathVariable Long id) {
+    OrderDTO orderDTO = orderService.markAsPending(id);
+    return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
+  }
+
   @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
   @PostMapping("/{id}/pay/{paymentMethod}")
   public ResponseEntity<?> payOrder(

@@ -29,6 +29,7 @@ public interface OrderService {
   public void removeOrderItemByOrderId(Long orderId, Long itemId);
 
   public OrderDTO markAsReady(Long orderId);
+  public OrderDTO markAsPending(Long orderId);
   public OrderDTO payOrder(Long orderId, PaymentMethodType paymentMethodType, User user);
   public OrderDTO payPartialOrder(Long orderId, PartialPaymentDTO paymentDTO, User user);
 
