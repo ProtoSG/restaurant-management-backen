@@ -36,4 +36,6 @@ public class OrderItemDTO {
 
   private ProductDTO product;
 
+  private String notes;
+
 }
