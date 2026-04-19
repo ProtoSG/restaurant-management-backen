@@ -333,8 +333,9 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderRepository.findById(orderId)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
-    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS) {
-      throw new BadRequestException("No se puede agregar items a un pedido que no está en estado CREATED o IN_PROGRESS");
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS
+        && order.getStatus() != OrderStatus.READY) {
+      throw new BadRequestException("No se puede agregar items a un pedido que no está en estado CREATED, IN_PROGRESS o READY");
     }
 
     Product product = productRepository.findById(request.getProductId())
@@ -362,7 +363,7 @@ public class OrderServiceImpl implements OrderService {
 
     OrderItem savedOrderItem = orderItemRepository.save(orderItem);
     order.calculateTotal();
-    if (order.getStatus() == OrderStatus.CREATED) {
+    if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.READY) {
       order.setStatus(OrderStatus.IN_PROGRESS);
     }
     orderRepository.save(order);
