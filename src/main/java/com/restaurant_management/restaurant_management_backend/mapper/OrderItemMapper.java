@@ -43,6 +43,7 @@ public class OrderItemMapper {
       .quantity(orderItem.getQuantity())
       .subTotal(orderItem.getSubTotal())
       .product(productDTO)
+      .notes(orderItem.getNotes())
       .build();
   }
 

@@ -51,7 +51,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
          "LEFT JOIN FETCH p.category " +
          "LEFT JOIN FETCH o.transactions " +
          "WHERE o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') " +
-         "ORDER BY o.id DESC")
+         "ORDER BY o.id ASC")
   List<Order> findActiveOrder();
 
   @Query("SELECT COUNT(DISTINCT o.id) FROM Order o " +

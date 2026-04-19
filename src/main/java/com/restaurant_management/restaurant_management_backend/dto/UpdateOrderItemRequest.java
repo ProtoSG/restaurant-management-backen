@@ -15,4 +15,6 @@ public class UpdateOrderItemRequest {
   @Min(value = 1, message = "La cantidad debe ser mayor a 0")
   @NotNull(message = "La cantidad es obligatoria")
   private Integer quantity;
+
+  private String notes;
 }

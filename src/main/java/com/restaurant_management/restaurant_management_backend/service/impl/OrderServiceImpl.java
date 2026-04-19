@@ -340,9 +340,13 @@ public class OrderServiceImpl implements OrderService {
       orderItem = existingOrderItem.get();
       orderItem.setQuantity(orderItem.getQuantity() + request.getQuantity());
       orderItem.calculateSubTotal();
+      if (request.getNotes() != null) {
+        orderItem.setNotes(request.getNotes());
+      }
     } else {
       orderItem = new OrderItem();
       orderItem.assignProductCustomPrice(product, null, request.getQuantity());
+      orderItem.setNotes(request.getNotes());
       orderItem.setOrder(order);
       order.addItem(orderItem);
     }
@@ -361,6 +365,7 @@ public class OrderServiceImpl implements OrderService {
       .subTotal(savedOrderItem.getSubTotal())
       .productId(savedOrderItem.getProduct().getId())
       .product(productMapper.toDto(savedOrderItem.getProduct()))
+      .notes(savedOrderItem.getNotes())
       .build();
   }
 
@@ -382,6 +387,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     orderItem.setQuantity(request.getQuantity());
+    if (request.getNotes() != null) {
+      orderItem.setNotes(request.getNotes());
+    }
     orderItem.calculateSubTotal();
 
     OrderItem updatedOrderItem = orderItemRepository.save(orderItem);
@@ -395,6 +403,7 @@ public class OrderServiceImpl implements OrderService {
       .subTotal(updatedOrderItem.getSubTotal())
       .productId(updatedOrderItem.getProduct().getId())
       .product(productMapper.toDto(updatedOrderItem.getProduct()))
+      .notes(updatedOrderItem.getNotes())
       .build();
   }
 

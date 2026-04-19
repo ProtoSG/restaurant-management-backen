@@ -47,6 +47,9 @@ public class OrderItem {
   @Builder.Default
   private BigDecimal subTotal = BigDecimal.ZERO;
 
+  @Column(name = "notes", length = 255)
+  private String notes;
+
   public void assignProduct(Product product, Integer quantity) {
     this.product = product;
     this.quantity = quantity;
