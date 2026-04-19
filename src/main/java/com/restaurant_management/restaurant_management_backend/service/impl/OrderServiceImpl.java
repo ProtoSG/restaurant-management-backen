@@ -41,6 +41,8 @@ import com.restaurant_management.restaurant_management_backend.repository.Transa
 import com.restaurant_management.restaurant_management_backend.repository.UserRepository;
 import com.restaurant_management.restaurant_management_backend.service.OrderCodeService;
 import com.restaurant_management.restaurant_management_backend.service.OrderService;
+import com.restaurant_management.restaurant_management_backend.websocket.OrderEvent;
+import com.restaurant_management.restaurant_management_backend.websocket.OrderEventPublisher;
 
 import lombok.RequiredArgsConstructor;
 
@@ -60,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
   private final OrderMapper orderMapper;
   private final OrderItemMapper orderItemMapper;
   private final ProductMapper productMapper;
+  private final OrderEventPublisher orderEventPublisher;
 
   @Transactional
   public OrderDTO save(OrderDTO orderDTO) {
@@ -84,7 +87,9 @@ public class OrderServiceImpl implements OrderService {
       newOrder.assignToTable(table);
     }
 
-    return orderMapper.toDto(orderRepository.save(newOrder));
+    OrderDTO saved = orderMapper.toDto(orderRepository.save(newOrder));
+    orderEventPublisher.publish(OrderEvent.Type.CREATED, saved.getId());
+    return saved;
   }
 
   @Transactional(readOnly = true)
@@ -139,7 +144,9 @@ public class OrderServiceImpl implements OrderService {
 
     tableTransferAuditRepository.save(audit);
 
-    return orderMapper.toDto(orderRepository.save(order));
+    OrderDTO result = orderMapper.toDto(orderRepository.save(order));
+    orderEventPublisher.publish(OrderEvent.Type.TABLE_CHANGED, result.getId());
+    return result;
   }
 
   @Transactional
@@ -149,7 +156,9 @@ public class OrderServiceImpl implements OrderService {
 
     order.setType(orderTypeDTO.getType());
 
-    return orderMapper.toDto(orderRepository.save(order));
+    OrderDTO result = orderMapper.toDto(orderRepository.save(order));
+    orderEventPublisher.publish(OrderEvent.Type.UPDATED, result.getId());
+    return result;
   }
 
   @Transactional
@@ -165,7 +174,9 @@ public class OrderServiceImpl implements OrderService {
       tableRepository.save(table);
     }
 
-    return orderMapper.toDto(orderRepository.save(order));
+    OrderDTO result = orderMapper.toDto(orderRepository.save(order));
+    orderEventPublisher.publish(OrderEvent.Type.CANCELLED, result.getId());
+    return result;
   }
 
   @Transactional
@@ -195,7 +206,9 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderRepository.findById(orderId)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
     order.markAsReady();
-    return orderMapper.toDto(orderRepository.save(order));
+    OrderDTO result = orderMapper.toDto(orderRepository.save(order));
+    orderEventPublisher.publish(OrderEvent.Type.READY, result.getId());
+    return result;
   }
 
   @Override
@@ -233,7 +246,9 @@ public class OrderServiceImpl implements OrderService {
         tableRepository.save(table);
     }
     
-    return orderMapper.toDto(orderRepository.save(order));
+    OrderDTO result = orderMapper.toDto(orderRepository.save(order));
+    orderEventPublisher.publish(OrderEvent.Type.PAID, result.getId());
+    return result;
   }
 
   @Override
@@ -288,7 +303,9 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PARTIALLY_PAID);
     }
     
-    return orderMapper.toDto(orderRepository.save(order));
+    OrderDTO result = orderMapper.toDto(orderRepository.save(order));
+    orderEventPublisher.publish(OrderEvent.Type.PAID, result.getId());
+    return result;
   }
 
   @Override
@@ -336,6 +353,7 @@ public class OrderServiceImpl implements OrderService {
       order.setStatus(OrderStatus.IN_PROGRESS);
     }
     orderRepository.save(order);
+    orderEventPublisher.publish(OrderEvent.Type.ITEM_ADDED, orderId);
 
     return OrderItemDTO.builder()
       .id(savedOrderItem.getId())
@@ -369,6 +387,7 @@ public class OrderServiceImpl implements OrderService {
     OrderItem updatedOrderItem = orderItemRepository.save(orderItem);
     order.calculateTotal();
     orderRepository.save(order);
+    orderEventPublisher.publish(OrderEvent.Type.ITEM_UPDATED, orderId);
 
     return OrderItemDTO.builder()
       .id(updatedOrderItem.getId())
@@ -403,6 +422,7 @@ public class OrderServiceImpl implements OrderService {
       order.setStatus(OrderStatus.CREATED);
     }
     orderRepository.save(order);
+    orderEventPublisher.publish(OrderEvent.Type.ITEM_REMOVED, orderId);
   }
 
 }
