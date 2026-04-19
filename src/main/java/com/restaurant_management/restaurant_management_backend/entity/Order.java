@@ -6,8 +6,14 @@ import com.restaurant_management.restaurant_management_backend.enums.OrderStatus
 import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,6 +26,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,22 +49,26 @@ public class Order {
   @Column(name = "order_code", unique = true, nullable = false)
   private String orderCode;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "table_id", referencedColumnName = "id", nullable = false)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "table_id", referencedColumnName = "id", nullable = true)
   private Table table;
 
   @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, orphanRemoval = true)
+  @OrderBy("id ASC")
   @Builder.Default
-  private List<OrderItem> items = new ArrayList<>();
+  private Set<OrderItem> items = new LinkedHashSet<>();
 
   @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, orphanRemoval = true)
   @Builder.Default
-  private List<Transaction> transactions = new ArrayList<>();
+  private Set<Transaction> transactions = new LinkedHashSet<>();
 
   @Enumerated(EnumType.STRING)
   @Column(name = "type", nullable = false)
   @Builder.Default
   private OrderType type = OrderType.DINE_IN;
+
+  @Column(name = "customer_name")
+  private String customerName;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false)
@@ -67,6 +78,14 @@ public class Order {
   @Column(name = "total")
   @Builder.Default
   private BigDecimal total = BigDecimal.ZERO;
+
+  @Column(name = "created_at")
+  @CreationTimestamp
+  private LocalDateTime createdAt;
+
+  @Column(name = "updated_at")
+  @UpdateTimestamp
+  private LocalDateTime updatedAt;
 
   public void assignToTable(Table table) {
     if (this.type != OrderType.DINE_IN) {
@@ -105,10 +124,18 @@ public class Order {
   }
 
   public void markAsPaid() {
-    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.PARTIALLY_PAID) {
-        throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
+    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.READY
+        && this.status != OrderStatus.PARTIALLY_PAID) {
+      throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
     }
     this.status = OrderStatus.PAID;
+  }
+
+  public void markAsReady() {
+    if (this.status != OrderStatus.IN_PROGRESS) {
+      throw new IllegalStateException("Solo órdenes IN_PROGRESS pueden marcarse como listas");
+    }
+    this.status = OrderStatus.READY;
   }
 
   // Métodos para pagos parciales
