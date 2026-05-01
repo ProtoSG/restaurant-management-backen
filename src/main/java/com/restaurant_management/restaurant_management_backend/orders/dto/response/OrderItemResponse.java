@@ -9,5 +9,7 @@ public record OrderItemResponse(
   Integer quantity,
   BigDecimal subTotal,
   ProductResponse product,
-  String notes
+  String notes,
+  Boolean isTakeaway,
+  BigDecimal takeawaySurcharge
 ) {}

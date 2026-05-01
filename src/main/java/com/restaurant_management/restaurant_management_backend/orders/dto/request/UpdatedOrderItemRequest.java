@@ -8,6 +8,7 @@ public record UpdatedOrderItemRequest(
   @Min(value = 1, message = "La cantidad debe ser mayor a 0")
   @NotNull(message = "La cantidad es obligatoria")
   Integer quantity,
-  String notes
+  String notes,
+  Boolean isTakeaway
 
 ) {}

@@ -12,6 +12,8 @@ public record AddOrderItemRequest(
   @NotNull(message = "La cantidad es obligatoria")
   Integer quantity,
 
-  String notes
+  String notes,
+
+  Boolean isTakeaway
 
 ) {}
