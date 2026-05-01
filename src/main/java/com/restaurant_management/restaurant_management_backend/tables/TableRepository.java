@@ -1,0 +1,18 @@
+package com.restaurant_management.restaurant_management_backend.tables;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.restaurant_management.restaurant_management_backend.tables.entity.Table;
+
+public interface TableRepository extends JpaRepository<Table, Long> {
+
+  @Query("SELECT t FROM Table t ORDER BY CAST(t.number AS int) ASC")
+  List<Table> findAllOrderedByNumberNumeric();
+
+  @Query("SELECT COUNT(t) FROM Table t WHERE t.status = 'OCCUPIED'")
+  Long countOccupiedTables();
+
+}

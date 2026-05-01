@@ -1,6 +1,8 @@
 package com.restaurant_management.restaurant_management_backend.entity;
 
-import com.restaurant_management.restaurant_management_backend.enums.TableStatus;
+import com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus;
+import com.restaurant_management.restaurant_management_backend.tables.entity.Table;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

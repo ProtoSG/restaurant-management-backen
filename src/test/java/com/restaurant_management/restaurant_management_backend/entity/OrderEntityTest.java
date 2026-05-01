@@ -1,7 +1,10 @@
 package com.restaurant_management.restaurant_management_backend.entity;
 
-import com.restaurant_management.restaurant_management_backend.enums.OrderStatus;
-import com.restaurant_management.restaurant_management_backend.enums.TransactionStatus;
+import com.restaurant_management.restaurant_management_backend.orders.entity.Order;
+import com.restaurant_management.restaurant_management_backend.shared.enums.OrderStatus;
+import com.restaurant_management.restaurant_management_backend.shared.enums.TransactionStatus;
+import com.restaurant_management.restaurant_management_backend.transactions.entity.Transaction;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
