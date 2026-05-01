@@ -42,7 +42,9 @@ public class OrderItemMapper {
       orderItem.getQuantity(),
       orderItem.getSubTotal(),
       productResponse,
-      orderItem.getNotes()
+      orderItem.getNotes(),
+      orderItem.getIsTakeaway(),
+      orderItem.getTakeawaySurcharge()
     );
   }
 

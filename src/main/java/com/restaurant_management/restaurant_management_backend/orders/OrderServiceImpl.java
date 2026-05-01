@@ -36,6 +36,7 @@ import com.restaurant_management.restaurant_management_backend.transactions.Tran
 import com.restaurant_management.restaurant_management_backend.transactions.TransactionRepository;
 import com.restaurant_management.restaurant_management_backend.transactions.dto.response.TransactionResponse;
 import com.restaurant_management.restaurant_management_backend.transactions.entity.Transaction;
+import com.restaurant_management.restaurant_management_backend.shared.config.SystemConfigRepository;
 import com.restaurant_management.restaurant_management_backend.websocket.OrderEventPublisher;
 import com.restaurant_management.restaurant_management_backend.websocket.OrderEvent;
 
@@ -57,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
   private final CategoryMapper categoryMapper;
   private final OrderEventPublisher orderEventPublisher;
   private final TransactionMapper transactionMapper;
+  private final SystemConfigRepository systemConfigRepository;
 
   @Transactional
   public OrderResponse save(CreateOrderRequest req) {
@@ -288,8 +290,12 @@ public class OrderServiceImpl implements OrderService {
     Product product = productRepository.findById(request.productId())
       .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
+    boolean isTakeaway = Boolean.TRUE.equals(request.isTakeaway()) || order.getType() == OrderType.TAKEAWAY;
+    BigDecimal surchargePerUnit = resolveSurcharge(isTakeaway);
+
     Optional<OrderItem> existingOrderItem = order.getItems().stream()
-      .filter(item -> item.getProduct().getId().equals(request.productId()))
+      .filter(item -> item.getProduct().getId().equals(request.productId())
+          && Boolean.TRUE.equals(item.getIsTakeaway()) == isTakeaway)
       .findFirst();
 
     OrderItem orderItem;
@@ -302,6 +308,8 @@ public class OrderServiceImpl implements OrderService {
       }
     } else {
       orderItem = new OrderItem();
+      orderItem.setIsTakeaway(isTakeaway);
+      orderItem.setTakeawaySurcharge(surchargePerUnit);
       orderItem.assignProductCustomPrice(product, null, request.quantity());
       orderItem.setNotes(request.notes());
       orderItem.setOrder(order);
@@ -334,6 +342,11 @@ public class OrderServiceImpl implements OrderService {
       throw new BadRequestException("No se puede modificar un pedido que no está en estado CREATED o IN_PROGRESS");
     }
 
+    if (request.isTakeaway() != null) {
+      boolean newIsTakeaway = Boolean.TRUE.equals(request.isTakeaway()) || order.getType() == OrderType.TAKEAWAY;
+      orderItem.setIsTakeaway(newIsTakeaway);
+      orderItem.setTakeawaySurcharge(resolveSurcharge(newIsTakeaway));
+    }
     orderItem.setQuantity(request.quantity());
     if (request.notes() != null) {
       orderItem.setNotes(request.notes());
@@ -414,17 +427,24 @@ public class OrderServiceImpl implements OrderService {
     }
 
     return new ActiveOrderResponse(
-        activeOrder.getId(), 
-        activeOrder.getOrderCode(), 
-        activeOrder.getStatus(), 
-        activeOrder.getType(), 
-        activeOrder.getTotal(), 
-        items, 
-        activeOrder.getPaidAmount(), 
+        activeOrder.getId(),
+        activeOrder.getOrderCode(),
+        activeOrder.getStatus(),
+        activeOrder.getType(),
+        activeOrder.getTotal(),
+        items,
+        activeOrder.getPaidAmount(),
         activeOrder.getRemainingAmount(),
         transactions
     );
 
+  }
+
+  private BigDecimal resolveSurcharge(boolean isTakeaway) {
+    if (!isTakeaway) return BigDecimal.ZERO;
+    return systemConfigRepository.findById("takeaway_surcharge")
+        .map(c -> new BigDecimal(c.getValue()))
+        .orElse(BigDecimal.ONE);
   }
 
 }

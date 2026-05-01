@@ -52,22 +52,38 @@ public class OrderItem {
   @Column(name = "notes", length = 255)
   private String notes;
 
+  @Column(name = "is_takeaway")
+  @Builder.Default
+  private Boolean isTakeaway = false;
+
+  @Column(name = "takeaway_surcharge", precision = 10, scale = 2)
+  @Builder.Default
+  private BigDecimal takeawaySurcharge = BigDecimal.ZERO;
+
   public void assignProduct(Product product, Integer quantity) {
     this.product = product;
     this.quantity = quantity;
-    this.subTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+    BigDecimal surcharge = this.takeawaySurcharge != null ? this.takeawaySurcharge : BigDecimal.ZERO;
+    this.subTotal = product.getPrice()
+        .multiply(BigDecimal.valueOf(quantity))
+        .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
   }
 
   public void assignProductCustomPrice(Product product, BigDecimal price, Integer quantity) {
     this.product = product;
     this.quantity = quantity;
     BigDecimal effectivePrice = (price != null) ? price : product.getPrice();
-    this.subTotal = effectivePrice.multiply(BigDecimal.valueOf(quantity));
+    BigDecimal surcharge = this.takeawaySurcharge != null ? this.takeawaySurcharge : BigDecimal.ZERO;
+    this.subTotal = effectivePrice.multiply(BigDecimal.valueOf(quantity))
+        .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
   }
 
   public void calculateSubTotal() {
     if (this.product != null && this.quantity != null) {
-      this.subTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+      BigDecimal surcharge = this.takeawaySurcharge != null ? this.takeawaySurcharge : BigDecimal.ZERO;
+      this.subTotal = product.getPrice()
+          .multiply(BigDecimal.valueOf(quantity))
+          .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
     }
   }
 }
