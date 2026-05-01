@@ -5,13 +5,13 @@ import java.math.BigDecimal;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import com.restaurant_management.restaurant_management_backend.entity.Category;
-import com.restaurant_management.restaurant_management_backend.entity.Product;
-import com.restaurant_management.restaurant_management_backend.entity.Role;
-import com.restaurant_management.restaurant_management_backend.enums.RoleName;
-import com.restaurant_management.restaurant_management_backend.repository.CategoryRepository;
-import com.restaurant_management.restaurant_management_backend.repository.ProductRepository;
-import com.restaurant_management.restaurant_management_backend.repository.RoleRepository;
+import com.restaurant_management.restaurant_management_backend.auth.RoleRepository;
+import com.restaurant_management.restaurant_management_backend.auth.entity.Role;
+import com.restaurant_management.restaurant_management_backend.menu.categories.CategoryRepository;
+import com.restaurant_management.restaurant_management_backend.menu.categories.entity.Category;
+import com.restaurant_management.restaurant_management_backend.menu.products.ProductRepository;
+import com.restaurant_management.restaurant_management_backend.menu.products.entity.Product;
+import com.restaurant_management.restaurant_management_backend.shared.enums.RoleName;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
