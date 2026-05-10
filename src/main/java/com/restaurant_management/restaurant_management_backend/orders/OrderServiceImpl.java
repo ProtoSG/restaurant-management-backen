@@ -287,11 +287,11 @@ public class OrderServiceImpl implements OrderService {
       throw new BadRequestException("No se puede agregar items a un pedido que no está en estado CREATED, IN_PROGRESS o READY");
     }
 
-    Product product = productRepository.findById(request.productId())
+    Product product = productRepository.findByIdWithCategory(request.productId())
       .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
     boolean isTakeaway = Boolean.TRUE.equals(request.isTakeaway()) || order.getType() == OrderType.TAKEAWAY;
-    BigDecimal surchargePerUnit = resolveSurcharge(isTakeaway);
+    BigDecimal surchargePerUnit = resolveSurcharge(isTakeaway, product);
 
     Optional<OrderItem> existingOrderItem = order.getItems().stream()
       .filter(item -> item.getProduct().getId().equals(request.productId())
@@ -345,7 +345,7 @@ public class OrderServiceImpl implements OrderService {
     if (request.isTakeaway() != null) {
       boolean newIsTakeaway = Boolean.TRUE.equals(request.isTakeaway()) || order.getType() == OrderType.TAKEAWAY;
       orderItem.setIsTakeaway(newIsTakeaway);
-      orderItem.setTakeawaySurcharge(resolveSurcharge(newIsTakeaway));
+      orderItem.setTakeawaySurcharge(resolveSurcharge(newIsTakeaway, orderItem.getProduct()));
     }
     orderItem.setQuantity(request.quantity());
     if (request.notes() != null) {
@@ -440,8 +440,10 @@ public class OrderServiceImpl implements OrderService {
 
   }
 
-  private BigDecimal resolveSurcharge(boolean isTakeaway) {
+  private BigDecimal resolveSurcharge(boolean isTakeaway, Product product) {
     if (!isTakeaway) return BigDecimal.ZERO;
+    String categoryName = product.getCategory() != null ? product.getCategory().getName() : "";
+    if ("bebidas".equalsIgnoreCase(categoryName)) return BigDecimal.ZERO;
     return systemConfigRepository.findById("takeaway_surcharge")
         .map(c -> new BigDecimal(c.getValue()))
         .orElse(BigDecimal.ONE);
