@@ -13,7 +13,7 @@ public record ActiveOrderResponse(
   OrderStatus status,
   OrderType type,
   BigDecimal total,
-  List<ActiveOrderItemResponse> items,
+  List<OrderItemResponse> items,
   BigDecimal paidAmount,
   BigDecimal remainingAmount,
   List<TransactionResponse> transactions

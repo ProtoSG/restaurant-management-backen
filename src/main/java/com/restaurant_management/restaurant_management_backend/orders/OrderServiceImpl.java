@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +17,14 @@ import com.restaurant_management.restaurant_management_backend.shared.exceptions
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.menu.categories.CategoryMapper;
 import com.restaurant_management.restaurant_management_backend.menu.products.ProductRepository;
-import com.restaurant_management.restaurant_management_backend.menu.products.dto.response.ActiveProductResponse;
+import com.restaurant_management.restaurant_management_backend.menu.products.dto.response.ProductResponse;
 import com.restaurant_management.restaurant_management_backend.menu.products.entity.Product;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.CreateOrderRequest;
-import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymenRequest;
+import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymentRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.UpdatedOrderItemRequest;
-import com.restaurant_management.restaurant_management_backend.orders.dto.response.ActiveOrderItemResponse;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.ActiveOrderResponse;
+import com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderItemResponse;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderResponse;
 import com.restaurant_management.restaurant_management_backend.orders.entity.Order;
 import com.restaurant_management.restaurant_management_backend.orders.entity.OrderItem;
@@ -52,13 +54,12 @@ public class OrderServiceImpl implements OrderService {
   private final ProductRepository productRepository;
   private final TransactionRepository transactionRepository;
   private final OrderCodeService orderCodeService;
-  private final UserRepository userRepository;
-
   private final OrderMapper orderMapper;
   private final CategoryMapper categoryMapper;
   private final OrderEventPublisher orderEventPublisher;
   private final TransactionMapper transactionMapper;
   private final SystemConfigRepository systemConfigRepository;
+  private final UserRepository userRepository;
 
   @Transactional
   public OrderResponse save(CreateOrderRequest req) {
@@ -77,7 +78,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     OrderResponse saved = orderMapper.toResponse(orderRepository.save(newOrder));
-    orderEventPublisher.publish(OrderEvent.Type.CREATED, saved.orderId());
+    Long tableId = newOrder.getTable() != null ? newOrder.getTable().getId() : null;
+    orderEventPublisher.publish(OrderEvent.Type.CREATED, saved.id(), tableId);
     return saved;
   }
 
@@ -104,18 +106,26 @@ public class OrderServiceImpl implements OrderService {
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
     Table table = order.getTable();
-    table.free();
+    if (table != null) {
+      table.free();
+    }
 
     orderRepository.delete(order);
   }
 
   @Transactional
-  public OrderResponse changeTable(Long orderId, Long tableId, User user) {
+  public OrderResponse changeTable(Long orderId, Long tableId) {
     Order order = orderRepository.findByIdWithDetails(orderId)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
+    if (order.getType() != OrderType.DINE_IN) {
+      throw new BadRequestException("Solo se puede cambiar mesa en órdenes de tipo DINE_IN");
+    }
+
     Table oldTable = order.getTable();
-    oldTable.free();
+    if (oldTable != null) {
+      oldTable.free();
+    }
 
     Table newTable = tableRepository.findById(tableId)
       .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
@@ -124,7 +134,7 @@ public class OrderServiceImpl implements OrderService {
     orderRepository.save(order);
 
     OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
-    orderEventPublisher.publish(OrderEvent.Type.TABLE_CHANGED, result.orderId());
+    orderEventPublisher.publish(OrderEvent.Type.TABLE_CHANGED, result.id(), newTable.getId());
     return result;
   }
 
@@ -141,8 +151,9 @@ public class OrderServiceImpl implements OrderService {
       tableRepository.save(table);
     }
 
+    Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
-    orderEventPublisher.publish(OrderEvent.Type.CANCELLED, id);
+    orderEventPublisher.publish(OrderEvent.Type.CANCELLED, id, tableId);
   }
 
   @Override
@@ -153,87 +164,69 @@ public class OrderServiceImpl implements OrderService {
     order.markAsReady();
     orderRepository.save(order);
     OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
-    orderEventPublisher.publish(OrderEvent.Type.READY, result.orderId());
+    Long tableId = order.getTable() != null ? order.getTable().getId() : null;
+    orderEventPublisher.publish(OrderEvent.Type.READY, result.id(), tableId);
     return result;
   }
 
   @Override
   @Transactional
-  public OrderResponse markAsPending(Long orderId) {
-    Order order = orderRepository.findByIdWithDetails(orderId)
-      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
-    order.markAsPending();
-    orderRepository.save(order);
-    return orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
-  }
-
-  @Override
-  @Transactional
-  public OrderResponse payOrder(Long orderId, PaymentMethodType paymentMethodType, User user) {
+  public OrderResponse payOrder(Long orderId, PaymentMethodType paymentMethodType) {
     Order order = orderRepository.findByIdWithDetails(orderId)
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
-    
-    // Validar que no haya pagos previos - si ya está PARTIALLY_PAID debe usar el endpoint de pago parcial
+
     if (order.getStatus() == OrderStatus.PARTIALLY_PAID) {
         throw new IllegalStateException(
             "Esta orden tiene pagos parciales previos. Use el endpoint de pago parcial para completar el pago."
         );
     }
-    
+
     order.markAsPaid();
-    
-    User currentUser = userRepository.findById(user.getId())
-      .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
     Transaction transaction = Transaction.builder()
         .order(order)
-        .user(currentUser)
+        .user(getAuthenticatedUser())
         .total(order.getTotal())
         .paymentMethod(paymentMethodType)
         .status(TransactionStatus.COMPLETED)
         .transactionDate(LocalDateTime.now())
         .build();
-    
+
     transactionRepository.save(transaction);
-    
+
     if (order.getType() == OrderType.DINE_IN) {
         Table table = order.getTable();
         table.free();
         tableRepository.save(table);
     }
     
+    Long tableId = order.getType() == OrderType.DINE_IN && order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
     OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
-    orderEventPublisher.publish(OrderEvent.Type.PAID, result.orderId());
+    orderEventPublisher.publish(OrderEvent.Type.PAID, result.id(), tableId);
     return result;
   }
 
   @Override
   @Transactional
-  public OrderResponse payPartialOrder(Long orderId, PartialPaymenRequest paymentDTO, User user) {
+  public OrderResponse payPartialOrder(Long orderId, PartialPaymentRequest paymentDTO) {
     Order order = orderRepository.findByIdWithDetails(orderId)
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
-    
-    // Validar estado de la orden
+
     if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.READY
         && order.getStatus() != OrderStatus.PARTIALLY_PAID) {
       throw new IllegalStateException("La orden no puede recibir pagos en este estado: " + order.getStatus());
     }
-    
-    // Validar que el monto no exceda el resto por pagar
+
     BigDecimal remainingAmount = order.getRemainingAmount();
     if (paymentDTO.amount().compareTo(remainingAmount) > 0) {
-        throw new IllegalArgumentException("El monto a pagar (" + paymentDTO.amount() + 
+        throw new IllegalArgumentException("El monto a pagar (" + paymentDTO.amount() +
             ") excede el monto restante (" + remainingAmount + ")");
     }
-    
-    // Crear la transacción
-    User currentUser = userRepository.findById(user.getId())
-        .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
     Transaction transaction = Transaction.builder()
         .order(order)
-        .user(currentUser)
+        .user(getAuthenticatedUser())
         .total(paymentDTO.amount())
         .paymentMethod(paymentDTO.paymentMethod())
         .status(TransactionStatus.COMPLETED)
@@ -260,9 +253,10 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PARTIALLY_PAID);
     }
     
+    Long tableId = order.getType() == OrderType.DINE_IN && order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
     OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
-    orderEventPublisher.publish(OrderEvent.Type.PAID, result.orderId());
+    orderEventPublisher.publish(OrderEvent.Type.PAID, result.id(), tableId);
     return result;
   }
 
@@ -289,6 +283,10 @@ public class OrderServiceImpl implements OrderService {
 
     Product product = productRepository.findByIdWithCategory(request.productId())
       .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+    if (!Boolean.TRUE.equals(product.getIsAvailable())) {
+      throw new BadRequestException("El producto no está disponible");
+    }
 
     boolean isTakeaway = Boolean.TRUE.equals(request.isTakeaway()) || order.getType() == OrderType.TAKEAWAY;
     BigDecimal surchargePerUnit = resolveSurcharge(isTakeaway, product);
@@ -321,8 +319,9 @@ public class OrderServiceImpl implements OrderService {
     if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.READY) {
       order.setStatus(OrderStatus.IN_PROGRESS);
     }
+    Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
-    orderEventPublisher.publish(OrderEvent.Type.ITEM_ADDED, orderId);
+    orderEventPublisher.publish(OrderEvent.Type.ITEM_ADDED, orderId, tableId);
   }
 
   @Override
@@ -355,8 +354,9 @@ public class OrderServiceImpl implements OrderService {
 
     orderItemRepository.save(orderItem);
     order.calculateTotal();
+    Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
-    orderEventPublisher.publish(OrderEvent.Type.ITEM_UPDATED, orderId);
+    orderEventPublisher.publish(OrderEvent.Type.ITEM_UPDATED, orderId, tableId);
   }
 
   @Override
@@ -376,6 +376,7 @@ public class OrderServiceImpl implements OrderService {
       throw new BadRequestException("No se puede eliminar items de un pedido que no está en estado CREATED o IN_PROGRESS");
     }
 
+    Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     order.removeItem(orderItem);
     orderItemRepository.delete(orderItem);
     order.calculateTotal();
@@ -383,7 +384,7 @@ public class OrderServiceImpl implements OrderService {
       order.setStatus(OrderStatus.CREATED);
     }
     orderRepository.save(order);
-    orderEventPublisher.publish(OrderEvent.Type.ITEM_REMOVED, orderId);
+    orderEventPublisher.publish(OrderEvent.Type.ITEM_REMOVED, orderId, tableId);
   }
 
   @Override
@@ -395,23 +396,27 @@ public class OrderServiceImpl implements OrderService {
     Order activeOrder = orderRepository.findActiveOrderByTableId(tableId)
       .orElseThrow(() -> new ResourceNotFoundException("No hay orden activa para esta mesa"));
 
-    List<ActiveOrderItemResponse> items = new ArrayList<ActiveOrderItemResponse>();
+    List<OrderItemResponse> items = new ArrayList<>();
 
     if (activeOrder.getItems() != null) {
       items = activeOrder.getItems().stream()
         .map(orderItem -> {
-          ActiveProductResponse productActive = new ActiveProductResponse(
-              orderItem.getId(),
+          ProductResponse product = new ProductResponse(
+              orderItem.getProduct().getId(),
               orderItem.getProduct().getName(),
               orderItem.getProduct().getPrice(),
-              categoryMapper.toReponse(orderItem.getProduct().getCategory())
+              categoryMapper.toResponse(orderItem.getProduct().getCategory()),
+              orderItem.getProduct().getIsAvailable()
             );
 
-          return new ActiveOrderItemResponse(
-            orderItem.getId(), 
-            orderItem.getQuantity(), 
-            orderItem.getSubTotal(), 
-            productActive
+          return new OrderItemResponse(
+            orderItem.getId(),
+            orderItem.getQuantity(),
+            orderItem.getSubTotal(),
+            product,
+            orderItem.getNotes(),
+            orderItem.getIsTakeaway(),
+            orderItem.getTakeawaySurcharge()
           );
         })
         .toList();
@@ -447,6 +452,14 @@ public class OrderServiceImpl implements OrderService {
     return systemConfigRepository.findById("takeaway_surcharge")
         .map(c -> new BigDecimal(c.getValue()))
         .orElse(BigDecimal.ONE);
+  }
+
+  private User getAuthenticatedUser() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+      return null;
+    }
+    return userRepository.findByUsername(auth.getName()).orElse(null);
   }
 
 }

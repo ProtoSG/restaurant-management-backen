@@ -34,7 +34,8 @@ public class OrderItemMapper {
       orderItem.getProduct().getId(),
       orderItem.getProduct().getName(),
       orderItem.getProduct().getPrice(),
-      category
+      category,
+      orderItem.getProduct().getIsAvailable()
     );
 
     return new OrderItemResponse(

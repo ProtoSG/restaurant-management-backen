@@ -1,5 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.orders.entity;
 
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,7 +18,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter @Setter
-public class OrderCodeSequence {
+public class OrderCodeSequence extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,9 +27,7 @@ public class OrderCodeSequence {
   @Column(name = "current_value", nullable = false)
   private Long currentValue;
 
-  public String generateNextCode() {
+  public void increment() {
     this.currentValue++;
-    return String.format("PED-%04d", this.currentValue);
   }
-
 }
