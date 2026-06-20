@@ -13,4 +13,5 @@ public class OrderEvent {
 
   private final Type type;
   private final Long orderId;
+  private final Long tableId; // null for TAKEAWAY orders
 }

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import com.restaurant_management.restaurant_management_backend.auth.entity.User;
 import com.restaurant_management.restaurant_management_backend.orders.entity.Order;
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 import com.restaurant_management.restaurant_management_backend.shared.enums.PaymentMethodType;
 import com.restaurant_management.restaurant_management_backend.shared.enums.TransactionStatus;
 
@@ -26,12 +27,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "Transactions")
+@Table(name = "transactions")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class Transaction {
+public class Transaction extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,7 +44,7 @@ public class Transaction {
   private Order order;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", nullable = false)
+  @JoinColumn(name = "user_id", nullable = true)
   private User user;
 
   @Column(name = "total", nullable = false, precision = 10, scale = 2)
@@ -61,4 +62,6 @@ public class Transaction {
   @Column(name = "transaction_date", nullable = false)
   private LocalDateTime transactionDate;
 
+  @Column(name = "reference", length = 255)
+  private String reference;
 }

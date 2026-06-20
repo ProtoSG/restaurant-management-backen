@@ -11,7 +11,7 @@ public class OrderEventPublisher {
 
   private final SimpMessagingTemplate messagingTemplate;
 
-  public void publish(OrderEvent.Type type, Long orderId) {
-    messagingTemplate.convertAndSend("/topic/orders", new OrderEvent(type, orderId));
+  public void publish(OrderEvent.Type type, Long orderId, Long tableId) {
+    messagingTemplate.convertAndSend("/topic/orders", new OrderEvent(type, orderId, tableId));
   }
 }
