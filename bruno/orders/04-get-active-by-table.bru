@@ -1,0 +1,15 @@
+meta {
+  name: Get Active Order By Table
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/orders/active/tables/{{table_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

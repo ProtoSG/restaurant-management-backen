@@ -1,0 +1,24 @@
+meta {
+  name: Add Item to Order - Takeaway (con surcharge)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/items
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "productId": {{product_id}},
+    "quantity": 1,
+    "notes": null,
+    "isTakeaway": true
+  }
+}
+
+assert {
+  res.status: eq 204
+}

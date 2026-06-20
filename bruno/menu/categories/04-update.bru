@@ -1,0 +1,21 @@
+meta {
+  name: Update Category (ADMIN only)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/categories/{{category_id}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Especiales del Día"
+  }
+}
+
+assert {
+  res.status: eq 200
+}

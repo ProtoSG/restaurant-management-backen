@@ -1,0 +1,41 @@
+{
+  "name": "dev",
+  "variables": [
+    {
+      "name": "base_url",
+      "value": "http://localhost:8080/api",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "table_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "order_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "item_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "category_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "product_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Weekly Sales
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/analytics/weekly-sales
+  body: none
+  auth: none
+}
+
+params:query {
+  startDate: 2026-06-05
+  endDate: 2026-06-11
+}
+
+assert {
+  res.status: eq 200
+}

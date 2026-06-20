@@ -1,0 +1,19 @@
+meta {
+  name: Daily Sales By Payment Method
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/analytics/daily-sales-by-payment
+  body: none
+  auth: none
+}
+
+params:query {
+  date: 2026-06-11
+}
+
+assert {
+  res.status: eq 200
+}

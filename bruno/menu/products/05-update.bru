@@ -1,0 +1,23 @@
+meta {
+  name: Update Product (ADMIN only)
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{base_url}}/products/{{product_id}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Ceviche Especial Premium",
+    "price": 30.00,
+    "categoryId": {{category_id}}
+  }
+}
+
+assert {
+  res.status: eq 200
+}

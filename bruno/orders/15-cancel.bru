@@ -1,0 +1,15 @@
+meta {
+  name: Cancel Order
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/cancel
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Update Order Item
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{base_url}}/orders/{{order_id}}/items/{{item_id}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "quantity": 3,
+    "notes": "Extra limón",
+    "isTakeaway": false
+  }
+}
+
+assert {
+  res.status: eq 204
+}

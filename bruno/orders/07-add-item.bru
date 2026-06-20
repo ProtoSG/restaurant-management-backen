@@ -1,0 +1,24 @@
+meta {
+  name: Add Item to Order
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/items
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "productId": {{product_id}},
+    "quantity": 2,
+    "notes": "Sin cebolla",
+    "isTakeaway": false
+  }
+}
+
+assert {
+  res.status: eq 204
+}

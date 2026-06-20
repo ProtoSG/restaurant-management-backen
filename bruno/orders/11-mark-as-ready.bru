@@ -1,0 +1,16 @@
+meta {
+  name: Mark Order as Ready (CHEF/ADMIN)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/ready
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq "READY"
+}

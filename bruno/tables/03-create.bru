@@ -1,0 +1,29 @@
+meta {
+  name: Create Table
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/tables
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "number": "5"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.number: eq "5"
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("table_id", res.body.id);
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Pay Order - Partial
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/pay-partial
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "amount": 15.00,
+    "paymentMethod": "CASH"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq "PARTIALLY_PAID"
+}

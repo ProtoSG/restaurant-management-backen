@@ -1,0 +1,16 @@
+meta {
+  name: Pay Order - CASH (full)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/pay/CASH
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq "PAID"
+}

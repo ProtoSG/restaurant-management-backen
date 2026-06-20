@@ -1,0 +1,15 @@
+meta {
+  name: Get Takeaway Surcharge
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/config/takeaway-surcharge
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
