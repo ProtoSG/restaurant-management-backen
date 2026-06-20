@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/ddbb_restaurant_management_dev}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    root: INFO
+    com.restaurant_management: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+
+scalar:
+  enabled: true
+  path: docs
+  url: http://localhost:8080/api/v3/api-docs
+
+frontend:
+  url: ${FRONTEND_URL:http://localhost:5173}
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY:HOv8ZZYQX29Trpm60oaaQcOUTcavzqIE8wigYj35gRQ1+auhRhPUJqifA7PDFQLW2VNYE+nI8wWWdo8aqAHquw==}
+
+cookie:
+  secure: false
+  same-site: Lax

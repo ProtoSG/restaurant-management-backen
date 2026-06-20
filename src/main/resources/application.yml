@@ -1,0 +1,50 @@
+# Base Configuration — shared across all profiles
+# Profile-specific overrides in: application-dev.yml, application-prod.yml
+
+spring:
+  application:
+    name: restaurant-management-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: America/Lima
+
+  datasource:
+    hikari:
+      pool-name: RestaurantPool
+      connection-timeout: 20000      # 20s — max wait for connection from pool
+      idle-timeout: 600000           # 10min — remove idle connections after
+      max-lifetime: 1800000          # 30min — rotate connections before DB closes them
+      keepalive-time: 300000         # 5min — ping idle connections to keep alive
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 15
+
+server:
+  servlet:
+    context-path: /api
+
+app:
+  timezone: America/Lima
+
+application:
+  security:
+    jwt:
+      expiration: 86400000        # 24h
+      refresh-token:
+        expiration: 604800000     # 7d
