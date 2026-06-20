@@ -23,7 +23,7 @@ public class CategoryServiceImpl implements CategoryService {
   public CategoryResponse save(CreateCategoryRequest req) {
     Category category = categoryMapper.toEntity(req);
 
-    return categoryMapper.toReponse(categoryRepository.save(category));
+    return categoryMapper.toResponse(categoryRepository.save(category));
   }
 
   @Override
@@ -31,7 +31,7 @@ public class CategoryServiceImpl implements CategoryService {
     Category category = categoryRepository.findById(id)
       .orElseThrow(() -> new ResourceNotFoundException("Categoria no encontrada"));
 
-    return categoryMapper.toReponse(category);
+    return categoryMapper.toResponse(category);
   }
 
   @Override
@@ -39,7 +39,7 @@ public class CategoryServiceImpl implements CategoryService {
     List<Category> categories = categoryRepository.findAll();
 
     return categories.stream()
-      .map(categoryMapper::toReponse)
+      .map(categoryMapper::toResponse)
       .toList();
   }
 
@@ -50,7 +50,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     category.setName(req.name());
 
-    return categoryMapper.toReponse(categoryRepository.save(category));
+    return categoryMapper.toResponse(categoryRepository.save(category));
   }
 
   @Override
