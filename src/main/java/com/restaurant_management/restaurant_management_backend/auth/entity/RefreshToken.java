@@ -20,35 +20,43 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users")
+@Table(name = "refresh_tokens")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class User extends AuditableEntity {
+public class RefreshToken extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "id")
   private Long id;
 
-  @Column(name = "name", nullable = false)
-  private String name;
-
-  @Column(name = "username", unique = true, nullable = false)
-  private String username;
-
-  @Column(name = "password", nullable = false)
-  private String password;
+  @Column(name = "token", nullable = false, unique = true, length = 512)
+  private String token;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
-  private Role role;
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  @Column(name = "expires_at", nullable = false)
+  private LocalDateTime expiresAt;
 
-  @Column(name = "last_login_at")
-  private LocalDateTime lastLoginAt;
+  @Column(name = "revoked_at")
+  private LocalDateTime revokedAt;
+
+  public boolean isExpired() {
+    return LocalDateTime.now().isAfter(this.expiresAt);
+  }
+
+  public boolean isRevoked() {
+    return this.revokedAt != null;
+  }
+
+  public boolean isValid() {
+    return !isExpired() && !isRevoked();
+  }
+
+  public void revoke() {
+    this.revokedAt = LocalDateTime.now();
+  }
 }

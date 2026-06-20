@@ -2,6 +2,7 @@ package com.restaurant_management.restaurant_management_backend.auth;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -48,7 +49,7 @@ public class JwtServiceImpl implements JwtService {
 
   private String buildToken(final User user, final long expiration) {
     return Jwts.builder()
-      .id(user.getId().toString())
+      .id(UUID.randomUUID().toString())
       .claims(Map.of(
         "username", user.getUsername(),
         "role", user.getRole().getName()
