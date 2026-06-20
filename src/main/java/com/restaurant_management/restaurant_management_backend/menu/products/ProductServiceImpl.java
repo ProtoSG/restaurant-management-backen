@@ -2,6 +2,8 @@ package com.restaurant_management.restaurant_management_backend.menu.products;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,10 +52,35 @@ public class ProductServiceImpl implements ProductService {
   }
 
   @Override
+  public Page<ProductResponse> findAll(Pageable pageable) {
+    return productRepository.findAllWithCategory(pageable)
+      .map(productMapper::toResponse);
+  }
+
+  @Override
+  public List<ProductResponse> findAllAvailable() {
+    return productRepository.findAllAvailableWithCategory().stream()
+      .map(productMapper::toResponse)
+      .toList();
+  }
+
+  @Override
+  public Page<ProductResponse> findAllAvailable(Pageable pageable) {
+    return productRepository.findAllAvailableWithCategory(pageable)
+      .map(productMapper::toResponse);
+  }
+
+  @Override
   public List<ProductResponse> findByCategory(Long categoryId) {
     return productRepository.findByCategoryId(categoryId).stream()
       .map(productMapper::toResponse)
       .toList();
+  }
+
+  @Override
+  public Page<ProductResponse> findByCategory(Long categoryId, Pageable pageable) {
+    return productRepository.findByCategoryId(categoryId, pageable)
+      .map(productMapper::toResponse);
   }
 
   @Override
@@ -69,6 +96,16 @@ public class ProductServiceImpl implements ProductService {
     product.setName(req.name());
     product.setPrice(req.price());
 
+    return productMapper.toResponse(productRepository.save(product));
+  }
+
+  @Override
+  @Transactional
+  public ProductResponse toggleAvailable(Long id) {
+    Product product = productRepository.findById(id)
+      .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+    product.setIsAvailable(!product.getIsAvailable());
     return productMapper.toResponse(productRepository.save(product));
   }
 
