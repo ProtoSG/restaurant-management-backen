@@ -10,9 +10,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -54,9 +56,10 @@ import com.restaurant_management.restaurant_management_backend.tables.TableRepos
 import com.restaurant_management.restaurant_management_backend.tables.entity.Table;
 import com.restaurant_management.restaurant_management_backend.transactions.TransactionRepository;
 import com.restaurant_management.restaurant_management_backend.transactions.dto.response.TransactionMountGroupByPaymentMethodResponse;
+import com.restaurant_management.restaurant_management_backend.transactions.dto.response.TrendTransactionsWeekResponse;
 import com.restaurant_management.restaurant_management_backend.transactions.entity.Transaction;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -73,6 +76,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
   @Override
   @Transactional
+  @Cacheable(value = "analytics-daily", key = "#date")
   public DailySummaryResponse getDailySummary(LocalDate date) {
     LocalDateTime startDate = date.atStartOfDay();
     LocalDateTime endDate = date.plusDays(1).atStartOfDay();
@@ -107,6 +111,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
   @Override
   @Transactional
+  @Cacheable(value = "analytics-overview", key = "#date")
   public DashboardOverviewResponse getDashboardOverview(LocalDate date) {
     LocalDateTime startDate = date.atStartOfDay();
     LocalDateTime endDate = date.plusDays(1).atStartOfDay();
@@ -158,6 +163,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
   @Override
   @Transactional
+  @Cacheable(value = "analytics-intraday", key = "#date")
   public BalanceIntradayResponse getBalanceIntraday(LocalDate date) {
     LocalDateTime startDate = date.atStartOfDay();
     LocalDateTime endDate = date.plusDays(1).atStartOfDay();
@@ -220,6 +226,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
   @Override
   @Transactional
+  @Cacheable(value = "analytics-earnings", key = "#period + ':' + #date")
   public EarningsSummaryResponse getEarningsSummary(String period, LocalDate date) {
     LocalDate currentStart, currentEnd, prevStart, prevEnd;
 
@@ -272,6 +279,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
   @Override
   @Transactional
+  @Cacheable(value = "analytics-top", key = "#limit + ':' + #startDate + ':' + #endDate")
   public TopProductsResponse getTopProductsWithPeriod(int limit, LocalDate startDate, LocalDate endDate) {
     LocalDateTime start = startDate != null ? startDate.atStartOfDay() : LocalDate.now().minusMonths(1).atStartOfDay();
     LocalDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay() : LocalDate.now().plusDays(1).atStartOfDay();
@@ -336,6 +344,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
   @Override
   @Transactional
+  @Cacheable(value = "analytics-weekly", key = "#startDate + ':' + #endDate")
   public WeeklySalesResponse getWeeklySales(LocalDate startDate, LocalDate endDate) {
     LocalDate start = startDate != null ? startDate : LocalDate.now().minusDays(6);
     LocalDate end = endDate != null ? endDate : LocalDate.now();
@@ -392,45 +401,46 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     return new CategoryProductsResponse(categoryId, categoryName, totalSales, totalQuantity, rankings);
   }
 
+  private TrendTransactionsWeekResponse mapToTrend(Object[] row) {
+    java.sql.Date sqlDate = (java.sql.Date) row[0];
+    BigDecimal sum = new BigDecimal(row[1].toString());
+    return new TrendTransactionsWeekResponse(sqlDate.toLocalDate(), sum);
+  }
+
   @Override
   @Transactional
   public DailyBalanceResponse getDailyBalance(LocalDate startDate, LocalDate endDate) {
     LocalDateTime start = startDate.atStartOfDay();
     LocalDateTime end = endDate.plusDays(1).atStartOfDay();
 
-    List<Transaction> transactions = transactionRepository.findCompletedTransactionsByDateRange(start, end);
+    Map<LocalDate, BigDecimal> sumByDate = transactionRepository.findDailySumsByDateRangeRaw(start, end)
+        .stream()
+        .map(this::mapToTrend)
+        .collect(Collectors.toMap(TrendTransactionsWeekResponse::transactionDate, TrendTransactionsWeekResponse::totalSum));
 
     List<DailyBalanceItemResponse> items = new ArrayList<>();
     BigDecimal totalBalance = BigDecimal.ZERO;
     Locale locale = new Locale("es", "PE");
 
     for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-      final LocalDate current = date;
-      LocalDateTime dayStart = current.atStartOfDay();
-      LocalDateTime dayEnd = current.plusDays(1).atStartOfDay();
-
-      BigDecimal daySales = transactions.stream()
-        .filter(t -> !t.getTransactionDate().isBefore(dayStart) && t.getTransactionDate().isBefore(dayEnd))
-        .map(Transaction::getTotal)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+      BigDecimal daySales = sumByDate.getOrDefault(date, BigDecimal.ZERO);
       if (daySales.compareTo(BigDecimal.ZERO) > 0) {
-        String label = current.getDayOfMonth() + " " +
-          current.getMonth().getDisplayName(TextStyle.SHORT, locale);
-        items.add(new DailyBalanceItemResponse(current, label, daySales));
+        String label = date.getDayOfMonth() + " " + date.getMonth().getDisplayName(TextStyle.SHORT, locale);
+        items.add(new DailyBalanceItemResponse(date, label, daySales));
         totalBalance = totalBalance.add(daySales);
       }
     }
 
     long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
-    List<Transaction> prevTransactions = transactionRepository
-      .findCompletedTransactionsByDateRange(startDate.minusDays(days).atStartOfDay(), startDate.atStartOfDay());
-    BigDecimal prevTotal = prevTransactions.stream()
-      .map(Transaction::getTotal)
-      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal prevTotal = transactionRepository
+        .findDailySumsByDateRangeRaw(startDate.minusDays(days).atStartOfDay(), start)
+        .stream()
+        .map(this::mapToTrend)
+        .map(TrendTransactionsWeekResponse::totalSum)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     return new DailyBalanceResponse(
-      startDate, endDate, totalBalance, calculatePercentageChange(prevTotal, totalBalance), items
+        startDate, endDate, totalBalance, calculatePercentageChange(prevTotal, totalBalance), items
     );
   }
 
