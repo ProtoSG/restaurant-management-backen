@@ -24,6 +24,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 
 @Component
 @RequiredArgsConstructor
@@ -39,7 +40,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       @NonNull HttpServletResponse response,
       @NonNull FilterChain filterChain
   ) throws ServletException, IOException {
-    if (request.getServletPath().contains("/auth")) {
+    MDC.put("requestId", java.util.UUID.randomUUID().toString().substring(0, 8));
+    try {
+      doFilterWithMdc(request, response, filterChain);
+    } finally {
+      MDC.clear();
+    }
+  }
+
+  private void doFilterWithMdc(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      FilterChain filterChain
+  ) throws ServletException, IOException {
+    String path = request.getServletPath();
+    if (path.equals("/auth/login") || path.equals("/auth/refresh")) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -77,6 +92,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       );
       authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
       SecurityContextHolder.getContext().setAuthentication(authToken);
+      MDC.put("username", user.get().getUsername());
     } catch (JwtException e) {
       // Token is expired or invalid — continue without setting authentication.
       // Spring Security will return 401 for protected endpoints.
