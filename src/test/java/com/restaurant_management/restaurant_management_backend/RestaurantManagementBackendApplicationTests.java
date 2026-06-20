@@ -1,10 +1,9 @@
 package com.restaurant_management.restaurant_management_backend;
 
+import com.restaurant_management.restaurant_management_backend.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class RestaurantManagementBackendApplicationTests {
+class RestaurantManagementBackendApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {

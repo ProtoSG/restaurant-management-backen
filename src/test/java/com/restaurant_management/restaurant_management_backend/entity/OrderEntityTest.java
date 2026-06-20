@@ -108,4 +108,125 @@ class OrderEntityTest {
 
     assertThat(order.isFullyPaid()).isTrue();
   }
+
+  @Test
+  void markAsReady_changesStatusToReady() {
+    Order order = Order.builder()
+      .status(OrderStatus.IN_PROGRESS)
+      .total(BigDecimal.valueOf(100))
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    order.markAsReady();
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.READY);
+  }
+
+  @Test
+  void markAsReady_throwsWhenNotInProgress() {
+    Order order = Order.builder()
+      .status(OrderStatus.CREATED)
+      .total(BigDecimal.valueOf(50))
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    assertThatThrownBy(order::markAsReady)
+      .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void assignToTable_throwsWhenNotDineIn() {
+    com.restaurant_management.restaurant_management_backend.tables.entity.Table table =
+      com.restaurant_management.restaurant_management_backend.tables.entity.Table.builder()
+        .status(com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus.FREE)
+        .build();
+
+    Order order = Order.builder()
+      .type(com.restaurant_management.restaurant_management_backend.shared.enums.OrderType.TAKEAWAY)
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    assertThatThrownBy(() -> order.assignToTable(table))
+      .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void assignToTable_throwsWhenTableOccupied() {
+    com.restaurant_management.restaurant_management_backend.tables.entity.Table table =
+      com.restaurant_management.restaurant_management_backend.tables.entity.Table.builder()
+        .status(com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus.OCCUPIED)
+        .build();
+
+    Order order = Order.builder()
+      .type(com.restaurant_management.restaurant_management_backend.shared.enums.OrderType.DINE_IN)
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    assertThatThrownBy(() -> order.assignToTable(table))
+      .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void assignToTable_occupiesTableAndLinksIt() {
+    com.restaurant_management.restaurant_management_backend.tables.entity.Table table =
+      com.restaurant_management.restaurant_management_backend.tables.entity.Table.builder()
+        .status(com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus.FREE)
+        .build();
+
+    Order order = Order.builder()
+      .type(com.restaurant_management.restaurant_management_backend.shared.enums.OrderType.DINE_IN)
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    order.assignToTable(table);
+
+    assertThat(table.getStatus())
+      .isEqualTo(com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus.OCCUPIED);
+    assertThat(order.getTable()).isEqualTo(table);
+  }
+
+  @Test
+  void isPartiallyPaid_returnsTrueWhenSomePaid() {
+    Transaction t = Transaction.builder()
+      .total(BigDecimal.valueOf(30))
+      .status(TransactionStatus.COMPLETED)
+      .transactionDate(LocalDateTime.now())
+      .build();
+
+    Set<Transaction> txns = new LinkedHashSet<>();
+    txns.add(t);
+
+    Order order = Order.builder()
+      .status(OrderStatus.PARTIALLY_PAID)
+      .total(BigDecimal.valueOf(100))
+      .transactions(txns)
+      .build();
+
+    assertThat(order.isPartiallyPaid()).isTrue();
+  }
+
+  @Test
+  void markAsPaid_fromReadyStatusWorks() {
+    Order order = Order.builder()
+      .status(OrderStatus.READY)
+      .total(BigDecimal.valueOf(80))
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    order.markAsPaid();
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+  }
+
+  @Test
+  void markAsPaid_throwsWhenCancelled() {
+    Order order = Order.builder()
+      .status(OrderStatus.CANCELLED)
+      .total(BigDecimal.valueOf(80))
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    assertThatThrownBy(order::markAsPaid)
+      .isInstanceOf(IllegalStateException.class);
+  }
 }
