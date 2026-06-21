@@ -1,0 +1,31 @@
+meta {
+  name: Create User (ADMIN only)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Juan Pérez",
+    "username": "juan.perez",
+    "password": "password123",
+    "role": "WAITER"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("user_id", res.body.id);
+  }
+}

@@ -10,7 +10,14 @@ get {
   auth: none
 }
 
+params:query {
+  page: 0
+  size: 20
+}
+
 assert {
   res.status: eq 200
-  res.body: isArray
+  res.body.content: isArray
+  res.body.totalElements: isDefined
+  res.body.totalPages: isDefined
 }

@@ -1,0 +1,20 @@
+meta {
+  name: Update Quick Add Products (ADMIN only)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/config/quick-add-products
+  body: json
+  auth: none
+}
+
+body:json {
+  [1, 2, 3]
+}
+
+assert {
+  res.status: eq 200
+  res.body: isArray
+}

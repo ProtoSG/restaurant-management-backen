@@ -1,11 +1,11 @@
 meta {
-  name: Get Products By Category
+  name: Get All Users (ADMIN only)
   type: http
-  seq: 3
+  seq: 1
 }
 
 get {
-  url: {{base_url}}/products/categories/{{category_id}}
+  url: {{base_url}}/users
   body: none
   auth: none
 }

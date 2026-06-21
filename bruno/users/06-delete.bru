@@ -1,0 +1,15 @@
+meta {
+  name: Delete User (ADMIN only)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/users/{{user_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Get User By ID (ADMIN only)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/users/{{user_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+}

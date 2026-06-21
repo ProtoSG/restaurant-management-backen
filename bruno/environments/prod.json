@@ -1,9 +1,9 @@
 {
-  "name": "dev",
+  "name": "prod",
   "variables": [
     {
       "name": "base_url",
-      "value": "http://localhost:8080/api",
+      "value": "http://localhost:8081/api",
       "enabled": true,
       "secret": false
     },

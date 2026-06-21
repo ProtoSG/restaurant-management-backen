@@ -1,0 +1,16 @@
+meta {
+  name: Toggle User Active (ADMIN only)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{base_url}}/users/{{user_id}}/toggle
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+}
