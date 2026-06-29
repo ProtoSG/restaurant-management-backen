@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +25,7 @@ import com.restaurant_management.restaurant_management_backend.orders.dto.reques
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.CreateOrderRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymentRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.UpdatedOrderItemRequest;
+import com.restaurant_management.restaurant_management_backend.orders.dto.request.KitchenLineRef;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.ActiveOrderResponse;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderItemResponse;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderResponse;
@@ -55,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
   private final TransactionRepository transactionRepository;
   private final OrderCodeService orderCodeService;
   private final OrderMapper orderMapper;
+  private final OrderItemMapper orderItemMapper;
   private final CategoryMapper categoryMapper;
   private final OrderEventPublisher orderEventPublisher;
   private final TransactionMapper transactionMapper;
@@ -93,7 +97,7 @@ public class OrderServiceImpl implements OrderService {
 
   @Transactional(readOnly = true)
   public List<OrderResponse> findAll() {
-    List<Order> orders = orderRepository.findAll();
+    List<Order> orders = orderRepository.findAllWithDetails();
 
     return orders.stream()
       .map(orderMapper::toResponse)
@@ -167,6 +171,47 @@ public class OrderServiceImpl implements OrderService {
     Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     orderEventPublisher.publish(OrderEvent.Type.READY, result.id(), tableId);
     return result;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public OrderResponse getKitchenPending(Long orderId) {
+    Order order = orderRepository.findByIdWithDetails(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+    List<OrderItemResponse> deltas = new ArrayList<>();
+    for (OrderItem item : order.getItems()) {
+      int printed = item.getKitchenPrintedQuantity() != null ? item.getKitchenPrintedQuantity() : 0;
+      int delta = item.getQuantity() - printed;
+      if (delta > 0) deltas.add(orderItemMapper.toResponse(item, delta));
+    }
+
+    OrderResponse full = orderMapper.toResponse(order);
+    return new OrderResponse(
+      full.id(), full.orderCode(), full.tableId(), full.tableNumber(),
+      full.type(), full.customerName(), full.status(), full.total(),
+      full.paidAmount(), full.remainingAmount(), deltas
+    );
+  }
+
+  @Override
+  @Transactional
+  public void confirmKitchen(Long orderId, List<KitchenLineRef> lines) {
+    Order order = orderRepository.findByIdWithDetails(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+    Map<Long, OrderItem> byId = order.getItems().stream()
+      .collect(Collectors.toMap(OrderItem::getId, i -> i));
+
+    for (KitchenLineRef line : lines) {
+      OrderItem item = byId.get(line.itemId());
+      if (item == null) continue;
+      int printed = item.getKitchenPrintedQuantity() != null ? item.getKitchenPrintedQuantity() : 0;
+      int updated = Math.min(item.getQuantity(), printed + line.quantity());
+      item.setKitchenPrintedQuantity(updated);
+    }
+
+    orderRepository.save(order);
   }
 
   @Override

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.CreateOrderRequest;
+import com.restaurant_management.restaurant_management_backend.orders.dto.request.KitchenConfirmRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymentRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.UpdatedOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.ActiveOrderResponse;
@@ -118,6 +119,20 @@ public class OrderController {
   public ResponseEntity<OrderResponse> markAsReady(@PathVariable Long id) {
     OrderResponse orderDTO = orderService.markAsReady(id);
     return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
+  }
+
+  @GetMapping("/{id}/kitchen/pending")
+  public ResponseEntity<OrderResponse> getKitchenPending(@PathVariable Long id) {
+    return ResponseEntity.ok(orderService.getKitchenPending(id));
+  }
+
+  @PostMapping("/{id}/kitchen/confirm")
+  public ResponseEntity<Void> confirmKitchen(
+      @PathVariable Long id,
+      @RequestBody @Valid KitchenConfirmRequest req
+  ) {
+    orderService.confirmKitchen(id, req.items());
+    return ResponseEntity.ok().build();
   }
 
   @PostMapping("/{id}/pay/{paymentMethod}")

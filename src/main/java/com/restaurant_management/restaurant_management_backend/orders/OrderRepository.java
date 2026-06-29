@@ -22,8 +22,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
          "WHERE o.id = :id")
   Optional<Order> findByIdWithDetails(@Param("id") Long id);
 
-  @Query("SELECT o FROM Order o WHERE o.table.id = :tableId AND o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') ORDER BY o.id DESC")
+  @Query("SELECT DISTINCT o FROM Order o " +
+         "LEFT JOIN FETCH o.table " +
+         "LEFT JOIN FETCH o.items i " +
+         "LEFT JOIN FETCH i.product p " +
+         "LEFT JOIN FETCH p.category " +
+         "LEFT JOIN FETCH o.transactions " +
+         "WHERE o.table.id = :tableId AND o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') " +
+         "ORDER BY o.id DESC")
   Optional<Order> findActiveOrderByTableId(@Param("tableId") Long tableId);
+
+  @Query("SELECT DISTINCT o FROM Order o " +
+         "LEFT JOIN FETCH o.table " +
+         "LEFT JOIN FETCH o.items i " +
+         "LEFT JOIN FETCH i.product p " +
+         "LEFT JOIN FETCH p.category " +
+         "LEFT JOIN FETCH o.transactions " +
+         "ORDER BY o.id ASC")
+  List<Order> findAllWithDetails();
 
   @Query("SELECT o FROM Order o Where " +
          "o.dateCreated >= :startDate AND " +

@@ -24,7 +24,16 @@ public class OrderItemMapper {
 
   public OrderItemResponse toResponse(OrderItem orderItem) {
     if (orderItem == null) return null;
+    return toResponse(orderItem, orderItem.getQuantity(), orderItem.getSubTotal());
+  }
 
+  /** Mapea forzando la cantidad (p.ej. el delta a imprimir en cocina). subTotal va en cero. */
+  public OrderItemResponse toResponse(OrderItem orderItem, int quantityOverride) {
+    if (orderItem == null) return null;
+    return toResponse(orderItem, quantityOverride, java.math.BigDecimal.ZERO);
+  }
+
+  private OrderItemResponse toResponse(OrderItem orderItem, Integer quantity, java.math.BigDecimal subTotal) {
     CategoryResponse category = new CategoryResponse(
       orderItem.getProduct().getCategory().getId(),
       orderItem.getProduct().getCategory().getName()
@@ -40,8 +49,8 @@ public class OrderItemMapper {
 
     return new OrderItemResponse(
       orderItem.getId(),
-      orderItem.getQuantity(),
-      orderItem.getSubTotal(),
+      quantity,
+      subTotal,
       productResponse,
       orderItem.getNotes(),
       orderItem.getIsTakeaway(),

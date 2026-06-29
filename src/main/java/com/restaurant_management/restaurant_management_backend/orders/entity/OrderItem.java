@@ -63,6 +63,10 @@ public class OrderItem extends AuditableEntity {
   @Builder.Default
   private BigDecimal takeawaySurcharge = BigDecimal.ZERO;
 
+  @Column(name = "kitchen_printed_quantity")
+  @Builder.Default
+  private Integer kitchenPrintedQuantity = 0;
+
   public void assignProduct(Product product, Integer quantity) {
     this.product = product;
     this.quantity = quantity;

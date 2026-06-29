@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.CreateOrderRequest;
+import com.restaurant_management.restaurant_management_backend.orders.dto.request.KitchenLineRef;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymentRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.UpdatedOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.ActiveOrderResponse;
@@ -26,6 +27,8 @@ public interface OrderService {
   public void removeOrderItemByOrderId(Long orderId, Long itemId);
 
   public OrderResponse markAsReady(Long orderId);
+  public OrderResponse getKitchenPending(Long orderId);
+  public void confirmKitchen(Long orderId, List<KitchenLineRef> lines);
   public OrderResponse payOrder(Long orderId, PaymentMethodType paymentMethodType);
   public OrderResponse payPartialOrder(Long orderId, PartialPaymentRequest paymentDTO);
 
