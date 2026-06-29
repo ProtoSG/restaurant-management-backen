@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +30,6 @@ public class AuthServiceImpl implements AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
-  private final BCryptPasswordEncoder bCryptPasswordEncoder;
   private final RoleRepository roleRepository;
   private final RefreshTokenRepository refreshTokenRepository;
 
@@ -41,19 +40,22 @@ public class AuthServiceImpl implements AuthService {
   @Transactional
   public AuthResult login(LoginRequest req) {
 
-    User user = userRepository.findByUsername(req.username())
-      .orElseThrow(() -> new ResourceNotFoundException("Este usuario no existe"));
-
-    if (!bCryptPasswordEncoder.matches(req.password(), user.getPassword())) {
-      throw new UnauthorizedException("Contraseña incorrecta");
+    // authenticationManager (DaoAuthenticationProvider) validates the password and
+    // hides "user not found" as BadCredentials, so a single generic message here
+    // prevents username enumeration via distinct errors/timing.
+    try {
+      authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(
+          req.username(),
+          req.password()
+        )
+      );
+    } catch (AuthenticationException e) {
+      throw new UnauthorizedException("Usuario o contraseña incorrectos");
     }
 
-    authenticationManager.authenticate(
-      new UsernamePasswordAuthenticationToken(
-        req.username(),
-        req.password()
-      )
-    );
+    User user = userRepository.findByUsername(req.username())
+      .orElseThrow(() -> new UnauthorizedException("Usuario o contraseña incorrectos"));
 
     String jwtToken      = jwtService.generateToken(user);
     String refreshTokenStr = jwtService.generateRefreshToken(user);

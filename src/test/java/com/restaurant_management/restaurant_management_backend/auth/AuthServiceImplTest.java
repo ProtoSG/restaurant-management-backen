@@ -8,7 +8,6 @@ import com.restaurant_management.restaurant_management_backend.auth.entity.Role;
 import com.restaurant_management.restaurant_management_backend.auth.entity.User;
 import com.restaurant_management.restaurant_management_backend.shared.enums.RoleName;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceConflictException;
-import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.UnauthorizedException;
 
 import org.junit.jupiter.api.Test;
@@ -17,8 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -37,7 +36,6 @@ class AuthServiceImplTest {
   @Mock PasswordEncoder passwordEncoder;
   @Mock JwtService jwtService;
   @Mock AuthenticationManager authenticationManager;
-  @Mock BCryptPasswordEncoder bCryptPasswordEncoder;
   @Mock RoleRepository roleRepository;
   @Mock RefreshTokenRepository refreshTokenRepository;
 
@@ -70,29 +68,32 @@ class AuthServiceImplTest {
   // ── login ────────────────────────────────────────────────────────────────────
 
   @Test
-  void login_throwsResourceNotFoundWhenUserDoesNotExist() {
-    when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+  void login_throwsUnauthorizedWithGenericMessageWhenUserDoesNotExist() {
+    // DaoAuthenticationProvider hides "user not found" as BadCredentials
+    when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+      .thenThrow(new BadCredentialsException("Bad credentials"));
 
     assertThatThrownBy(() -> authService.login(new LoginRequest("unknown", "pw")))
-      .isInstanceOf(ResourceNotFoundException.class);
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Usuario o contraseña incorrectos");
   }
 
   @Test
   void login_throwsUnauthorizedWhenPasswordIncorrect() {
-    when(userRepository.findByUsername("admin")).thenReturn(Optional.of(adminUser()));
-    when(bCryptPasswordEncoder.matches("wrong", "encoded")).thenReturn(false);
+    when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+      .thenThrow(new BadCredentialsException("Bad credentials"));
 
     assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "wrong")))
-      .isInstanceOf(UnauthorizedException.class);
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Usuario o contraseña incorrectos");
   }
 
   @Test
   void login_returnsTokensWhenCredentialsValid() {
     User user = adminUser();
-    when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
-    when(bCryptPasswordEncoder.matches("password", "encoded")).thenReturn(true);
     when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
       .thenReturn(null);
+    when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
     when(jwtService.generateToken(user)).thenReturn("access-token");
     when(jwtService.generateRefreshToken(user)).thenReturn("refresh-token");
     when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));

@@ -6,7 +6,6 @@ import com.restaurant_management.restaurant_management_backend.auth.dto.internal
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.LoginRequest;
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.RegisterRequest;
 import com.restaurant_management.restaurant_management_backend.shared.enums.RoleName;
-import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.UnauthorizedException;
 
 import org.junit.jupiter.api.Test;
@@ -66,16 +65,19 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void login_throwsWhenUserDoesNotExist() {
+        // Generic message + same exception as wrong-password → no username enumeration
         assertThatThrownBy(() ->
             authService.login(new LoginRequest("nobody_xyz", "pass")))
-            .isInstanceOf(ResourceNotFoundException.class);
+            .isInstanceOf(UnauthorizedException.class)
+            .hasMessage("Usuario o contraseña incorrectos");
     }
 
     @Test
     void login_throwsWhenPasswordIsWrong() {
         assertThatThrownBy(() ->
             authService.login(new LoginRequest("admin", "wrong-password")))
-            .isInstanceOf(UnauthorizedException.class);
+            .isInstanceOf(UnauthorizedException.class)
+            .hasMessage("Usuario o contraseña incorrectos");
     }
 
     @Test

@@ -24,11 +24,15 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+  private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
 
   private final JwtService jwtService;
   private final UserDetailsService userDetailsService;
@@ -96,6 +100,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     } catch (JwtException e) {
       // Token is expired or invalid — continue without setting authentication.
       // Spring Security will return 401 for protected endpoints.
+      log.debug("JWT validation failed: {}", e.getMessage());
     }
 
     filterChain.doFilter(request, response);
