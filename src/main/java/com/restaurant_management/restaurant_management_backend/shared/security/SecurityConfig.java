@@ -38,6 +38,8 @@ public class SecurityConfig {
       .cors(Customizer.withDefaults())
       .csrf(csrf -> csrf.disable())
       .authorizeHttpRequests(auth -> auth
+        // Health check — public
+        .requestMatchers("/health").permitAll()
         // Auth endpoints — public
         .requestMatchers("/auth/login", "/auth/refresh").permitAll()
         // API docs — public in dev
