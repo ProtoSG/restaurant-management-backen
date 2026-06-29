@@ -23,6 +23,9 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
+# Parchar paquetes del SO de la base (p.ej. p11-kit) a la última versión de Alpine
+RUN apk upgrade --no-cache
+
 # Usuario no-root por seguridad
 RUN addgroup -S -g 1001 spring && adduser -S -u 1001 -G spring spring
 
