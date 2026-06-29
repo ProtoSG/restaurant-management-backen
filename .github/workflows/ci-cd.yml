@@ -45,14 +45,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push image
+      # Construir local (load) → escanear → pushear solo si el scan pasa.
+      # Así una imagen con CVEs CRITICAL/HIGH nunca llega a GHCR.
+      - name: Build image (local)
         uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
+          load: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Scan image (Trivy)
@@ -63,6 +63,11 @@ jobs:
           exit-code: '1'
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+      - name: Push image (only if scan passed)
+        run: |
+          docker tag ${{ env.IMAGE }}:${{ github.sha }} ${{ env.IMAGE }}:latest
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
 
   deploy:
     needs: build-push
