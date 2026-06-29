@@ -18,7 +18,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @SpringBootTest
 @TestPropertySource(properties = {
     "spring.flyway.baseline-on-migrate=false",
-    "spring.flyway.baseline-version=0"
+    "spring.flyway.baseline-version=0",
+    "application.security.jwt.secret-key=dGVzdC1zZWNyZXQta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0cy1vbmx5LW5vdC1yZWFsLTEyMzQ1Ng==",
+    "admin.default.username=admin",
+    "admin.default.password=admin123"
 })
 public abstract class AbstractIntegrationTest {
 

@@ -37,7 +37,7 @@ frontend:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:HOv8ZZYQX29Trpm60oaaQcOUTcavzqIE8wigYj35gRQ1+auhRhPUJqifA7PDFQLW2VNYE+nI8wWWdo8aqAHquw==}
+      secret-key: ${JWT_SECRET_KEY}
 
 cookie:
   secure: false

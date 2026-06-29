@@ -48,3 +48,9 @@ application:
       expiration: 86400000        # 24h
       refresh-token:
         expiration: 604800000     # 7d
+
+# Seed admin credentials — no defaults: startup fails if env vars are missing
+admin:
+  default:
+    username: ${ADMIN_USERNAME}
+    password: ${ADMIN_PASSWORD}

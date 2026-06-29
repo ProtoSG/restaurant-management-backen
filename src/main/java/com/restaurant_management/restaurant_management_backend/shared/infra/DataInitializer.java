@@ -2,6 +2,7 @@ package com.restaurant_management.restaurant_management_backend.shared.infra;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -24,20 +25,26 @@ public class DataInitializer implements CommandLineRunner {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
 
+  @Value("${admin.default.username}")
+  private String adminUsername;
+
+  @Value("${admin.default.password}")
+  private String adminPassword;
+
   @Override
   @Transactional
   public void run(String... args) {
-    if (!userRepository.existsByUsername("admin")) {
+    if (!userRepository.existsByUsername(adminUsername)) {
       var adminRole = roleRepository.findByName(RoleName.ADMIN)
           .orElseThrow(() -> new RuntimeException("Rol ADMIN no encontrado — verificar migrations V14"));
       userRepository.save(User.builder()
           .name("Administrador")
-          .username("admin")
-          .password(passwordEncoder.encode("admin123"))
+          .username(adminUsername)
+          .password(passwordEncoder.encode(adminPassword))
           .role(adminRole)
           .isActive(true)
           .build());
-      log.info("Usuario admin creado (cambiar password en producción)");
+      log.info("Usuario admin '{}' creado desde variables de entorno", adminUsername);
     }
   }
 }

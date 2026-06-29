@@ -26,7 +26,9 @@ http://localhost:8080/api/docs
 
 Dev DB: `localhost:5433`, user/pass `postgres/postgres`, db `ddbb_restaurant_management_dev`.
 
-All endpoints are prefixed `/api` (set in `application-dev.properties`).
+All endpoints are prefixed `/api` (`server.servlet.context-path` in `application.yml`).
+
+Required env vars (no defaults — app fails to start if missing): `JWT_SECRET_KEY` (base64 secret), `ADMIN_USERNAME` and `ADMIN_PASSWORD` (seed admin user).
 
 ## Architecture
 
@@ -86,7 +88,7 @@ Roles: `ADMIN`, `CASHIER`, `WAITER`, `CHEF`.
 
 | Profile | DB port | `ddl-auto` | Notes |
 |---------|---------|-----------|-------|
-| `dev` (default) | 5433 | `update` | SQL logging on, Scalar docs enabled |
+| `dev` (default) | 5433 | `validate` | SQL logging on, Scalar docs enabled |
 | `prod` | via env vars | `validate` | Cookie `secure=true` |
 
 Switch via `SPRING_PROFILES_ACTIVE` env var or `--spring.profiles.active=prod`.
