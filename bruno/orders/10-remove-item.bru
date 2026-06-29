@@ -1,0 +1,15 @@
+meta {
+  name: Remove Item from Order
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{base_url}}/orders/{{order_id}}/items/{{item_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}

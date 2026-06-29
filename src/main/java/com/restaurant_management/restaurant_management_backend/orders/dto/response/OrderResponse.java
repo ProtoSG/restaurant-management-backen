@@ -7,7 +7,7 @@ import com.restaurant_management.restaurant_management_backend.shared.enums.Orde
 import com.restaurant_management.restaurant_management_backend.shared.enums.OrderType;
 
 public record OrderResponse(
-  Long        orderId,
+  Long        id,
   String      orderCode,
   Long        tableId,
   String      tableNumber,

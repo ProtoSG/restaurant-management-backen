@@ -1,0 +1,21 @@
+meta {
+  name: Top Products With Period
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/analytics/products/top-with-period
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 5
+  startDate: 2026-06-01
+  endDate: 2026-06-11
+}
+
+assert {
+  res.status: eq 200
+}

@@ -3,6 +3,7 @@ package com.restaurant_management.restaurant_management_backend.orders.entity;
 import java.math.BigDecimal;
 
 import com.restaurant_management.restaurant_management_backend.menu.products.entity.Product;
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,7 +13,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +26,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class OrderItem {
+public class OrderItem extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,7 +45,10 @@ public class OrderItem {
   @Builder.Default
   private Integer quantity = 0;
 
-  @Column(name = "sub_total")
+  @Column(name = "unit_price", precision = 10, scale = 2)
+  private BigDecimal unitPrice;
+
+  @Column(name = "sub_total", precision = 10, scale = 2)
   @Builder.Default
   private BigDecimal subTotal = BigDecimal.ZERO;
 
@@ -60,11 +63,16 @@ public class OrderItem {
   @Builder.Default
   private BigDecimal takeawaySurcharge = BigDecimal.ZERO;
 
+  @Column(name = "kitchen_printed_quantity")
+  @Builder.Default
+  private Integer kitchenPrintedQuantity = 0;
+
   public void assignProduct(Product product, Integer quantity) {
     this.product = product;
     this.quantity = quantity;
+    this.unitPrice = product.getPrice();
     BigDecimal surcharge = this.takeawaySurcharge != null ? this.takeawaySurcharge : BigDecimal.ZERO;
-    this.subTotal = product.getPrice()
+    this.subTotal = this.unitPrice
         .multiply(BigDecimal.valueOf(quantity))
         .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
   }
@@ -72,17 +80,17 @@ public class OrderItem {
   public void assignProductCustomPrice(Product product, BigDecimal price, Integer quantity) {
     this.product = product;
     this.quantity = quantity;
-    BigDecimal effectivePrice = (price != null) ? price : product.getPrice();
+    this.unitPrice = (price != null) ? price : product.getPrice();
     BigDecimal surcharge = this.takeawaySurcharge != null ? this.takeawaySurcharge : BigDecimal.ZERO;
-    this.subTotal = effectivePrice.multiply(BigDecimal.valueOf(quantity))
+    this.subTotal = this.unitPrice.multiply(BigDecimal.valueOf(quantity))
         .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
   }
 
   public void calculateSubTotal() {
     if (this.product != null && this.quantity != null) {
+      BigDecimal price = (this.unitPrice != null) ? this.unitPrice : product.getPrice();
       BigDecimal surcharge = this.takeawaySurcharge != null ? this.takeawaySurcharge : BigDecimal.ZERO;
-      this.subTotal = product.getPrice()
-          .multiply(BigDecimal.valueOf(quantity))
+      this.subTotal = price.multiply(BigDecimal.valueOf(quantity))
           .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
     }
   }

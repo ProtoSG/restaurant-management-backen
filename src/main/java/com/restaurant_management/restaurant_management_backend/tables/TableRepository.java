@@ -9,7 +9,8 @@ import com.restaurant_management.restaurant_management_backend.tables.entity.Tab
 
 public interface TableRepository extends JpaRepository<Table, Long> {
 
-  @Query("SELECT t FROM Table t ORDER BY CAST(t.number AS int) ASC")
+  // Numeric codes (e.g. "1","10") sort as integers; letter codes (e.g. "B","BAR") sort after, alphabetically.
+  @Query(value = "SELECT * FROM tables ORDER BY CASE WHEN number ~ '^\\d+$' THEN CAST(number AS INTEGER) ELSE NULL END NULLS LAST, number ASC", nativeQuery = true)
   List<Table> findAllOrderedByNumberNumeric();
 
   @Query("SELECT COUNT(t) FROM Table t WHERE t.status = 'OCCUPIED'")

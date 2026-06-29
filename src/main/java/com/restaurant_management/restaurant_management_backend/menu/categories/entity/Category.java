@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.restaurant_management.restaurant_management_backend.menu.products.entity.Product;
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,21 +24,28 @@ import lombok.Setter;
 @Table(name = "categories")
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter 
+@Getter
 @Setter
 @Builder
-public class Category {
+public class Category extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "name")
+  @Column(name = "name", nullable = false)
   private String name;
 
+  @Column(name = "sort_order")
   @Builder.Default
-  @OneToMany(mappedBy = "category" ,fetch = FetchType.LAZY, orphanRemoval = true)
-  private List<Product> products = new ArrayList<>();
+  private Integer sortOrder = 0;
 
+  @Column(name = "is_active", nullable = false)
+  @Builder.Default
+  private Boolean isActive = true;
+
+  @Builder.Default
+  @OneToMany(mappedBy = "category", fetch = FetchType.LAZY, orphanRemoval = true)
+  private List<Product> products = new ArrayList<>();
 }

@@ -1,0 +1,15 @@
+meta {
+  name: Change Order Table
+  type: http
+  seq: 16
+}
+
+put {
+  url: {{base_url}}/orders/{{order_id}}/table/{{table_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

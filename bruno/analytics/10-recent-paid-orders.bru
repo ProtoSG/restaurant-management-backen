@@ -1,0 +1,20 @@
+meta {
+  name: Recent Paid Orders
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{base_url}}/analytics/recent-paid-orders
+  body: none
+  auth: none
+}
+
+params:query {
+  date: 2026-06-11
+  limit: 10
+}
+
+assert {
+  res.status: eq 200
+}

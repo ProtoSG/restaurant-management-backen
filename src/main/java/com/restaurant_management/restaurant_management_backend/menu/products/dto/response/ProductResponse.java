@@ -9,6 +9,7 @@ public record ProductResponse(
   Long id,
   String name,
   BigDecimal price,
-  CategoryResponse category
+  CategoryResponse category,
+  Boolean isAvailable
 
 ) {}

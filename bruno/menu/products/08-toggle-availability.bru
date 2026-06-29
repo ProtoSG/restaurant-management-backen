@@ -1,0 +1,16 @@
+meta {
+  name: Toggle Product Availability (ADMIN only)
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{base_url}}/products/{{product_id}}/toggle
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+}

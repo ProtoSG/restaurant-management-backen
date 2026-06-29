@@ -1,0 +1,15 @@
+meta {
+  name: Delete Category (ADMIN only)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/categories/{{category_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}

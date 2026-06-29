@@ -9,7 +9,6 @@ import org.springframework.data.repository.query.Param;
 
 import com.restaurant_management.restaurant_management_backend.shared.enums.TransactionStatus;
 import com.restaurant_management.restaurant_management_backend.transactions.dto.response.TransactionMountGroupByPaymentMethodResponse;
-import com.restaurant_management.restaurant_management_backend.transactions.dto.response.TrendTransactionsWeekResponse;
 import com.restaurant_management.restaurant_management_backend.transactions.entity.Transaction;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -36,9 +35,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         "WHERE status = 'COMPLETED' " +
         "GROUP BY CAST(transaction_date AS DATE) " +
         "ORDER BY CAST(transaction_date AS DATE) DESC " +
-        "LIMIT 7", 
+        "LIMIT 7",
         nativeQuery = true)
-  List<TrendTransactionsWeekResponse> getTotalAmountWeekGroupedByTransactionDate();
+  List<Object[]> getTotalAmountWeekGroupedByTransactionDateRaw();
 
   @Query("SELECT new com.restaurant_management.restaurant_management_backend.transactions.dto.response.TransactionMountGroupByPaymentMethodResponse(" +
             "t.paymentMethod, " +
@@ -73,6 +72,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
          "AND t.status = 'COMPLETED' " +
          "ORDER BY t.transactionDate DESC")
   List<Transaction> findRecentCompletedTransactions(
+    @Param("startDate") LocalDateTime startDate,
+    @Param("endDate") LocalDateTime endDate
+  );
+
+  @Query(value = "SELECT CAST(transaction_date AS DATE) as transactionDate, SUM(total) as totalSum " +
+                 "FROM transactions " +
+                 "WHERE status = 'COMPLETED' " +
+                 "AND transaction_date >= :startDate " +
+                 "AND transaction_date < :endDate " +
+                 "GROUP BY CAST(transaction_date AS DATE) " +
+                 "ORDER BY CAST(transaction_date AS DATE) ASC",
+         nativeQuery = true)
+  List<Object[]> findDailySumsByDateRangeRaw(
     @Param("startDate") LocalDateTime startDate,
     @Param("endDate") LocalDateTime endDate
   );

@@ -1,0 +1,23 @@
+meta {
+  name: Get All Users (ADMIN only)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/users
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 0
+  size: 20
+}
+
+assert {
+  res.status: eq 200
+  res.body.content: isArray
+  res.body.totalElements: isDefined
+  res.body.totalPages: isDefined
+}

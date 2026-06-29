@@ -1,0 +1,23 @@
+meta {
+  name: Get Available Products
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/products/available
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 0
+  size: 20
+}
+
+assert {
+  res.status: eq 200
+  res.body.content: isArray
+  res.body.totalElements: isDefined
+  res.body.totalPages: isDefined
+}

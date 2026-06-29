@@ -1,0 +1,15 @@
+meta {
+  name: Delete Table
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/tables/{{table_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}

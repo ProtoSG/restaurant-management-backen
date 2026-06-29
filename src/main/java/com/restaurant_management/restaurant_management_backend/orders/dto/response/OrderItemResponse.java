@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import com.restaurant_management.restaurant_management_backend.menu.products.dto.response.ProductResponse;
 
 public record OrderItemResponse(
-  Long orderId,
+  Long id,
   Integer quantity,
   BigDecimal subTotal,
   ProductResponse product,

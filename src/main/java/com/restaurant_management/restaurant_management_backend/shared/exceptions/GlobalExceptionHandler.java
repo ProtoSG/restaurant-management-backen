@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -73,7 +74,7 @@ public class GlobalExceptionHandler {
     } else if (message != null && message.contains("OrderType")) {
       message = "El campo 'type' debe ser uno de los valores: DINE_IN, TAKEAWAY, DELIVERY";
     } else if (message != null && message.contains("OrderStatus")) {
-      message = "El campo 'type' debe ser uno de los valores: CREATED, IN_PROGRESS, READY, PAID, CANCELLED";
+      message = "El campo 'status' debe ser uno de los valores: CREATED, IN_PROGRESS, READY, PARTIALLY_PAID, PAID, CANCELLED";
     } else {
       message = "Error de formato en la petición. Verifica los datos enviados.";
     }
@@ -135,6 +136,21 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception) {
     ErrorResponse errorResponse = new ErrorResponse(
       exception.getMessage(),
+      HttpStatus.BAD_REQUEST.value(),
+      "Argumento inválido"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException exception) {
+    String message = String.format("El parámetro '%s' tiene un formato inválido. Se esperaba: %s",
+        exception.getName(),
+        exception.getRequiredType() != null ? exception.getRequiredType().getSimpleName() : "formato válido");
+
+    ErrorResponse errorResponse = new ErrorResponse(
+      message,
       HttpStatus.BAD_REQUEST.value(),
       "Argumento inválido"
     );

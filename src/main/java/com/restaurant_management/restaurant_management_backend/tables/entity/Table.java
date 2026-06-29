@@ -1,5 +1,6 @@
 package com.restaurant_management.restaurant_management_backend.tables.entity;
 
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 import com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus;
 
 import jakarta.persistence.Column;
@@ -9,7 +10,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,7 +23,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class Table {
+public class Table extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +32,13 @@ public class Table {
 
   @Column(name = "number")
   private String number;
+
+  @Column(name = "capacity")
+  private Integer capacity;
+
+  @Column(name = "is_active", nullable = false)
+  @Builder.Default
+  private Boolean isActive = true;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "state")
@@ -58,5 +65,4 @@ public class Table {
     }
     this.status = TableStatus.RESERVED;
   }
-
 }

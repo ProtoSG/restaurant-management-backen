@@ -1,0 +1,28 @@
+meta {
+  name: Create Category (ADMIN only)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/categories
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Especiales"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("category_id", res.body.id);
+  }
+}

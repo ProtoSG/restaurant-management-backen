@@ -31,7 +31,8 @@ public class ProductMapper {
       product.getId(),
       product.getName(),
       product.getPrice(),
-      category
+      category,
+      product.getIsAvailable()
     );
   }
 

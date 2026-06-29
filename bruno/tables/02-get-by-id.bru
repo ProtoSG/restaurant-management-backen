@@ -1,0 +1,16 @@
+meta {
+  name: Get Table By ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/tables/{{table_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+}

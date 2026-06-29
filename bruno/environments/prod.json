@@ -1,0 +1,47 @@
+{
+  "name": "prod",
+  "variables": [
+    {
+      "name": "base_url",
+      "value": "http://localhost:8081/api",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "table_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "order_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "item_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "category_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "product_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "user_id",
+      "value": "1",
+      "enabled": true,
+      "secret": false
+    }
+  ]
+}

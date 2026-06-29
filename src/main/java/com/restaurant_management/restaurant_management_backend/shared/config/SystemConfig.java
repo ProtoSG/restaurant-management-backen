@@ -1,5 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.shared.config;
 
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,7 +16,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter @Setter
-public class SystemConfig {
+public class SystemConfig extends AuditableEntity {
 
   @Id
   @Column(name = "config_key", length = 100)

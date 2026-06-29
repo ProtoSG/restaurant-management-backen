@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- Dev: colored console output legible -->
+  <springProfile name="dev">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%X{requestId:-       }] %cyan(%logger{36}) - %msg%n</pattern>
+      </encoder>
+    </appender>
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="com.restaurant_management" level="DEBUG"/>
+    <logger name="org.hibernate.SQL"          level="DEBUG"/>
+    <logger name="org.springframework.web"    level="DEBUG"/>
+  </springProfile>
+
+  <!-- Prod: formato estructurado parseable -->
+  <springProfile name="prod">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>{"ts":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%-5level","reqId":"%X{requestId:-}","user":"%X{username:-}","logger":"%logger{36}","msg":"%replace(%msg){'\"','\\\"'}"}%n</pattern>
+      </encoder>
+    </appender>
+    <root level="WARN">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="com.restaurant_management" level="INFO"/>
+  </springProfile>
+
+</configuration>

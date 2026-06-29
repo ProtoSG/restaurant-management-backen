@@ -1,0 +1,19 @@
+meta {
+  name: Balance Intraday
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/analytics/balance-intraday
+  body: none
+  auth: none
+}
+
+params:query {
+  date: 2026-06-11
+}
+
+assert {
+  res.status: eq 200
+}

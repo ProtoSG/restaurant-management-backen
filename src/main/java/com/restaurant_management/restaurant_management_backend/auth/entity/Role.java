@@ -1,5 +1,6 @@
 package com.restaurant_management.restaurant_management_backend.auth.entity;
 
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 import com.restaurant_management.restaurant_management_backend.shared.enums.RoleName;
 
 import jakarta.persistence.Column;
@@ -22,7 +23,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class Role {
+public class Role extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,5 +32,4 @@ public class Role {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, unique = true)
   private RoleName name;
-
 }

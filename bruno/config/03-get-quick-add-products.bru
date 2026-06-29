@@ -1,0 +1,16 @@
+meta {
+  name: Get Quick Add Products (ADMIN only)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/config/quick-add-products
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body: isArray
+}

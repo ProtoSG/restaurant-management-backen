@@ -1,0 +1,23 @@
+meta {
+  name: Update User (ADMIN only)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/users/{{user_id}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Juan Pérez Actualizado",
+    "role": "CASHIER"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+}

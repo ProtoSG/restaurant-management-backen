@@ -22,12 +22,28 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
          "WHERE o.id = :id")
   Optional<Order> findByIdWithDetails(@Param("id") Long id);
 
-  @Query("SELECT o FROM Order o WHERE o.table.id = :tableId AND o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') ORDER BY o.id DESC")
+  @Query("SELECT DISTINCT o FROM Order o " +
+         "LEFT JOIN FETCH o.table " +
+         "LEFT JOIN FETCH o.items i " +
+         "LEFT JOIN FETCH i.product p " +
+         "LEFT JOIN FETCH p.category " +
+         "LEFT JOIN FETCH o.transactions " +
+         "WHERE o.table.id = :tableId AND o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') " +
+         "ORDER BY o.id DESC")
   Optional<Order> findActiveOrderByTableId(@Param("tableId") Long tableId);
 
+  @Query("SELECT DISTINCT o FROM Order o " +
+         "LEFT JOIN FETCH o.table " +
+         "LEFT JOIN FETCH o.items i " +
+         "LEFT JOIN FETCH i.product p " +
+         "LEFT JOIN FETCH p.category " +
+         "LEFT JOIN FETCH o.transactions " +
+         "ORDER BY o.id ASC")
+  List<Order> findAllWithDetails();
+
   @Query("SELECT o FROM Order o Where " +
-         "o.createdAt >= :startDate AND " +
-         "o.createdAt < :endDate")
+         "o.dateCreated >= :startDate AND " +
+         "o.dateCreated < :endDate")
   List<Order> findOrdersByDate(
     @Param("startDate") LocalDateTime startDate,
     @Param("endDate") LocalDateTime endDate
@@ -36,8 +52,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
   @Query("SELECT new com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderStatusCountResponse(" +
        "o.status, COUNT(o)) " +
        "FROM Order o " +
-       "WHERE o.createdAt >= :startDate AND " +
-       "o.createdAt < :endDate " +
+       "WHERE o.dateCreated >= :startDate AND " +
+       "o.dateCreated < :endDate " +
        "GROUP BY o.status")
   List<OrderStatusCountResponse> countOrdersByStatusAndDate(
       @Param("startDate") LocalDateTime startDate,

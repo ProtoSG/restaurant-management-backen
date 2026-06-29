@@ -1,0 +1,16 @@
+meta {
+  name: Get Active Orders
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/orders/active
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body: isArray
+}

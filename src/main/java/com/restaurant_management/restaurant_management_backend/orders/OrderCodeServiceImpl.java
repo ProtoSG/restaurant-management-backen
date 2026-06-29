@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import com.restaurant_management.restaurant_management_backend.orders.entity.OrderCodeSequence;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -33,6 +33,7 @@ public class OrderCodeServiceImpl implements OrderCodeService {
       sequenceRepository.save(sequence);
     }
     
-    return sequence.generateNextCode();
+    sequence.increment();
+    return String.format("PED-%04d", sequence.getCurrentValue());
   }
 }

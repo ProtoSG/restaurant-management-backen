@@ -1,0 +1,19 @@
+meta {
+  name: Top Selling Products
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/analytics/products/top-selling
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 10
+}
+
+assert {
+  res.status: eq 200
+}

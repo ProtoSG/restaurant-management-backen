@@ -3,6 +3,7 @@ package com.restaurant_management.restaurant_management_backend.menu.products.en
 import java.math.BigDecimal;
 
 import com.restaurant_management.restaurant_management_backend.menu.categories.entity.Category;
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,7 +27,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class Product {
+public class Product extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,12 +37,24 @@ public class Product {
   @Column(name = "name", nullable = false)
   private String name;
 
-  @Column(name = "price")
+  @Column(name = "description", length = 500)
+  private String description;
+
+  @Column(name = "image_url", length = 500)
+  private String imageUrl;
+
+  @Column(name = "price", precision = 10, scale = 2)
   @Builder.Default
   private BigDecimal price = BigDecimal.ZERO;
+
+  @Column(name = "cost", precision = 10, scale = 2)
+  private BigDecimal cost;
+
+  @Column(name = "is_available", nullable = false)
+  @Builder.Default
+  private Boolean isAvailable = true;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "category_id", referencedColumnName = "id", nullable = false)
   private Category category;
-
 }

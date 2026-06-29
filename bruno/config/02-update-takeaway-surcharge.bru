@@ -1,0 +1,19 @@
+meta {
+  name: Update Takeaway Surcharge (ADMIN only)
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{base_url}}/config/takeaway-surcharge
+  body: json
+  auth: none
+}
+
+body:json {
+  1.50
+}
+
+assert {
+  res.status: eq 200
+}

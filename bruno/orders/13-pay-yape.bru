@@ -1,0 +1,16 @@
+meta {
+  name: Pay Order - YAPE (full)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{base_url}}/orders/{{order_id}}/pay/YAPE
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq "PAID"
+}

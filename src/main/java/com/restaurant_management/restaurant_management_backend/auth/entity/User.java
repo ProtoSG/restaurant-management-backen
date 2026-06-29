@@ -2,8 +2,7 @@ package com.restaurant_management.restaurant_management_backend.auth.entity;
 
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,7 +25,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class User {
+public class User extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,16 +41,14 @@ public class User {
   @Column(name = "password", nullable = false)
   private String password;
 
-  @ManyToOne(fetch = FetchType.EAGER, optional = false)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
   private Role role;
 
-  @Column(name = "created_at")
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+  @Column(name = "is_active", nullable = false)
+  @Builder.Default
+  private Boolean isActive = true;
 
-  @Column(name = "updated_at")
-  @UpdateTimestamp
-  private LocalDateTime updatedAt;
-
+  @Column(name = "last_login_at")
+  private LocalDateTime lastLoginAt;
 }

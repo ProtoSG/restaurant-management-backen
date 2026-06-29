@@ -1,5 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.orders.entity;
 
+import com.restaurant_management.restaurant_management_backend.auth.entity.User;
+import com.restaurant_management.restaurant_management_backend.shared.audit.AuditableEntity;
 import com.restaurant_management.restaurant_management_backend.shared.enums.OrderStatus;
 import com.restaurant_management.restaurant_management_backend.shared.enums.OrderType;
 import com.restaurant_management.restaurant_management_backend.shared.enums.TableStatus;
@@ -9,13 +11,8 @@ import com.restaurant_management.restaurant_management_backend.transactions.enti
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
-
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -41,7 +38,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter @Setter
 @Builder
-public class Order {
+public class Order extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,6 +51,10 @@ public class Order {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "table_id", referencedColumnName = "id", nullable = true)
   private Table table;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "waiter_id", referencedColumnName = "id", nullable = true)
+  private User waiter;
 
   @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, orphanRemoval = true)
   @OrderBy("id ASC")
@@ -81,13 +82,12 @@ public class Order {
   @Builder.Default
   private BigDecimal total = BigDecimal.ZERO;
 
-  @Column(name = "created_at")
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+  @Column(name = "discount", precision = 10, scale = 2)
+  @Builder.Default
+  private BigDecimal discount = BigDecimal.ZERO;
 
-  @Column(name = "updated_at")
-  @UpdateTimestamp
-  private LocalDateTime updatedAt;
+  @Column(name = "closed_at")
+  private LocalDateTime closedAt;
 
   public void assignToTable(Table table) {
     if (this.type != OrderType.DINE_IN) {
@@ -116,9 +116,11 @@ public class Order {
   }
 
   private void recalculateTotal() {
-    this.total = items.stream()
-      .map(OrderItem::getSubTotal)
-      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal subtotal = items.stream()
+        .map(OrderItem::getSubTotal)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal disc = (this.discount != null) ? this.discount : BigDecimal.ZERO;
+    this.total = subtotal.subtract(disc);
   }
 
   public void calculateTotal() {
@@ -131,6 +133,7 @@ public class Order {
       throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
     }
     this.status = OrderStatus.PAID;
+    this.closedAt = LocalDateTime.now();
   }
 
   public void markAsReady() {
@@ -140,14 +143,6 @@ public class Order {
     this.status = OrderStatus.READY;
   }
 
-  public void markAsPending() {
-    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.IN_PROGRESS) {
-      throw new IllegalStateException("Solo órdenes CREATED o IN_PROGRESS pueden marcarse como pendientes");
-    }
-    this.status = OrderStatus.PENDING;
-  }
-
-  // Métodos para pagos parciales
   public BigDecimal getPaidAmount() {
     return transactions.stream()
         .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
@@ -165,8 +160,7 @@ public class Order {
 
   public boolean isPartiallyPaid() {
     BigDecimal paid = getPaidAmount();
-    return paid.compareTo(BigDecimal.ZERO) > 0 && 
+    return paid.compareTo(BigDecimal.ZERO) > 0 &&
            paid.compareTo(this.total) < 0;
   }
-
 }
