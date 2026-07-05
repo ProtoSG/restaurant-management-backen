@@ -491,6 +491,8 @@ public class OrderServiceImpl implements OrderService {
     return new ActiveOrderResponse(
         activeOrder.getId(),
         activeOrder.getOrderCode(),
+        activeOrder.getTable() != null ? activeOrder.getTable().getId() : null,
+        activeOrder.getTable() != null ? activeOrder.getTable().getNumber() : null,
         activeOrder.getStatus(),
         activeOrder.getType(),
         activeOrder.getTotal(),
