@@ -38,4 +38,14 @@ public class SystemConfigController {
   public ResponseEntity<List<Long>> updateQuickAddProducts(@RequestBody List<Long> ids) {
     return ResponseEntity.ok(systemConfigService.updateQuickAddProducts(ids));
   }
+
+  @GetMapping("/quick-notes")
+  public ResponseEntity<List<String>> getQuickNotes() {
+    return ResponseEntity.ok(systemConfigService.getQuickNotes());
+  }
+
+  @PutMapping("/quick-notes")
+  public ResponseEntity<List<String>> updateQuickNotes(@RequestBody List<String> notes) {
+    return ResponseEntity.ok(systemConfigService.updateQuickNotes(notes));
+  }
 }

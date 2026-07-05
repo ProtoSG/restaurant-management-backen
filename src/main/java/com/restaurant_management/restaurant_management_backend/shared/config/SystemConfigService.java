@@ -23,6 +23,7 @@ public class SystemConfigService {
 
   private static final String TAKEAWAY_SURCHARGE_KEY = "takeaway_surcharge";
   private static final String QUICK_ADD_KEY = "quick_add_product_ids";
+  private static final String QUICK_NOTES_KEY = "quick_note_suggestions";
 
   private final SystemConfigRepository systemConfigRepository;
   private final ObjectMapper objectMapper;
@@ -69,5 +70,33 @@ public class SystemConfigService {
     }
     systemConfigRepository.save(config);
     return ids;
+  }
+
+  @Transactional(readOnly = true)
+  public List<String> getQuickNotes() {
+    return systemConfigRepository.findById(QUICK_NOTES_KEY)
+        .map(c -> {
+          try {
+            return objectMapper.readValue(c.getValue(), new TypeReference<List<String>>() {});
+          } catch (JsonProcessingException e) {
+            log.warn("Valor inválido en config '{}': {}. Devolviendo lista vacía.", QUICK_NOTES_KEY, e.getMessage());
+            return Collections.<String>emptyList();
+          }
+        })
+        .orElseGet(Collections::emptyList);
+  }
+
+  @Transactional
+  public List<String> updateQuickNotes(List<String> notes) {
+    SystemConfig config = systemConfigRepository.findById(QUICK_NOTES_KEY)
+        .orElse(new SystemConfig(QUICK_NOTES_KEY, "[]"));
+    try {
+      config.setValue(objectMapper.writeValueAsString(notes));
+    } catch (JsonProcessingException e) {
+      log.error("No se pudo serializar quick-notes: {}", e.getMessage());
+      throw new IllegalArgumentException("Lista de notas inválida", e);
+    }
+    systemConfigRepository.save(config);
+    return notes;
   }
 }
