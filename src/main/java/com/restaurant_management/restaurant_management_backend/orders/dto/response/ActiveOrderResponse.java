@@ -10,6 +10,8 @@ import com.restaurant_management.restaurant_management_backend.transactions.dto.
 public record ActiveOrderResponse(
   Long id,
   String orderCode,
+  Long tableId,
+  String tableNumber,
   OrderStatus status,
   OrderType type,
   BigDecimal total,
