@@ -211,7 +211,19 @@ public class OrderServiceImpl implements OrderService {
       item.setKitchenPrintedQuantity(updated);
     }
 
+    // Enviar la comanda a cocina equivale a "listo": al no usar pantalla de
+    // cocina, la ticketera es la señal. Auto-transiciona IN_PROGRESS -> READY.
+    boolean markedReady = order.getStatus() == OrderStatus.IN_PROGRESS;
+    if (markedReady) {
+      order.markAsReady();
+    }
+
     orderRepository.save(order);
+
+    if (markedReady) {
+      Long tableId = order.getTable() != null ? order.getTable().getId() : null;
+      orderEventPublisher.publish(OrderEvent.Type.READY, order.getId(), tableId);
+    }
   }
 
   @Override
@@ -258,8 +270,8 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderRepository.findByIdWithDetails(orderId)
         .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
-    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.READY
-        && order.getStatus() != OrderStatus.PARTIALLY_PAID) {
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS
+        && order.getStatus() != OrderStatus.READY && order.getStatus() != OrderStatus.PARTIALLY_PAID) {
       throw new IllegalStateException("La orden no puede recibir pagos en este estado: " + order.getStatus());
     }
 

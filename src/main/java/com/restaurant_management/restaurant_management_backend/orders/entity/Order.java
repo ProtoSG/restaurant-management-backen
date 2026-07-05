@@ -128,8 +128,8 @@ public class Order extends AuditableEntity {
   }
 
   public void markAsPaid() {
-    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.READY
-        && this.status != OrderStatus.PARTIALLY_PAID) {
+    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.IN_PROGRESS
+        && this.status != OrderStatus.READY && this.status != OrderStatus.PARTIALLY_PAID) {
       throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
     }
     this.status = OrderStatus.PAID;

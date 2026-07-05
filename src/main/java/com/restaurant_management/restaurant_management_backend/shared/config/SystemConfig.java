@@ -22,6 +22,6 @@ public class SystemConfig extends AuditableEntity {
   @Column(name = "config_key", length = 100)
   private String key;
 
-  @Column(name = "config_value", nullable = false, length = 255)
+  @Column(name = "config_value", nullable = false, columnDefinition = "TEXT")
   private String value;
 }

@@ -50,10 +50,16 @@ public class SecurityConfig {
         .requestMatchers(HttpMethod.POST, "/orders/*/ready").hasAnyRole("ADMIN", "CHEF")
         // Analytics — ADMIN or CASHIER
         .requestMatchers("/analytics/**").hasAnyRole("ADMIN", "CASHIER")
+        // Quick notes — readable by any authenticated staff (waiters take orders)
+        .requestMatchers(HttpMethod.GET, "/config/quick-notes").authenticated()
         // System config — ADMIN only
         .requestMatchers("/config/**").hasRole("ADMIN")
         // User management — ADMIN only
         .requestMatchers("/users/**").hasRole("ADMIN")
+        // Table write operations — ADMIN only
+        .requestMatchers(HttpMethod.POST, "/tables/**").hasRole("ADMIN")
+        .requestMatchers(HttpMethod.PUT, "/tables/**").hasRole("ADMIN")
+        .requestMatchers(HttpMethod.DELETE, "/tables/**").hasRole("ADMIN")
         // Menu write operations — ADMIN only
         .requestMatchers(HttpMethod.POST, "/categories/**", "/products/**").hasRole("ADMIN")
         .requestMatchers(HttpMethod.PUT, "/categories/**", "/products/**").hasRole("ADMIN")
