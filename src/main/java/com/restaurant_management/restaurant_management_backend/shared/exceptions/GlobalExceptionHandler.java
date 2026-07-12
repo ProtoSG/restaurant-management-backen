@@ -3,6 +3,9 @@ package com.restaurant_management.restaurant_management_backend.shared.exception
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,6 +16,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException exception) {
@@ -156,6 +161,35 @@ public class GlobalExceptionHandler {
     );
 
     return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException exception) {
+    log.warn("Violación de integridad de datos", exception);
+
+    ErrorResponse errorResponse = new ErrorResponse(
+      "No se pudo completar la operación porque el registro está siendo usado por otro dato del sistema.",
+      HttpStatus.CONFLICT.value(),
+      "Conflicto de integridad de datos"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+  }
+
+  // Red de seguridad: cualquier excepción no mapeada arriba cae acá en vez de
+  // escapar al manejador por defecto de Spring (que no devuelve el formato
+  // ErrorResponse y termina mostrando texto crudo/en inglés en el frontend).
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception) {
+    log.error("Excepción no controlada", exception);
+
+    ErrorResponse errorResponse = new ErrorResponse(
+      "Ocurrió un error inesperado. Intentá de nuevo o avisá a soporte si el problema persiste.",
+      HttpStatus.INTERNAL_SERVER_ERROR.value(),
+      "Error interno"
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
 }

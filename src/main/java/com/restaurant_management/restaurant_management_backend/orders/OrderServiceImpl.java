@@ -109,6 +109,10 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderRepository.findById(id)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
+    if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.FINALIZADO) {
+      throw new BadRequestException("No se puede eliminar un pedido ya pagado");
+    }
+
     Table table = order.getTable();
     if (table != null) {
       table.free();
@@ -147,6 +151,10 @@ public class OrderServiceImpl implements OrderService {
     Order order = orderRepository.findByIdWithDetails(id)
       .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
+    if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.FINALIZADO) {
+      throw new BadRequestException("No se puede cancelar un pedido ya pagado");
+    }
+
     order.setStatus(OrderStatus.CANCELLED);
 
     if (order.getType() == OrderType.DINE_IN && order.getTable() != null) {
@@ -170,6 +178,26 @@ public class OrderServiceImpl implements OrderService {
     OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
     Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     orderEventPublisher.publish(OrderEvent.Type.READY, result.id(), tableId);
+    return result;
+  }
+
+  @Override
+  @Transactional
+  public OrderResponse finalizeOrder(Long orderId) {
+    Order order = orderRepository.findByIdWithDetails(orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+    order.markAsFinalized();
+
+    if (order.getType() == OrderType.DINE_IN) {
+      Table table = order.getTable();
+      table.free();
+      tableRepository.save(table);
+    }
+
+    orderRepository.save(order);
+    OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
+    Long tableId = order.getTable() != null ? order.getTable().getId() : null;
+    orderEventPublisher.publish(OrderEvent.Type.FINALIZED, result.id(), tableId);
     return result;
   }
 
@@ -211,19 +239,10 @@ public class OrderServiceImpl implements OrderService {
       item.setKitchenPrintedQuantity(updated);
     }
 
-    // Enviar la comanda a cocina equivale a "listo": al no usar pantalla de
-    // cocina, la ticketera es la señal. Auto-transiciona IN_PROGRESS -> READY.
-    boolean markedReady = order.getStatus() == OrderStatus.IN_PROGRESS;
-    if (markedReady) {
-      order.markAsReady();
-    }
-
+    // Imprimir la comanda solo registra lo enviado a cocina. Cocina no usa
+    // pantalla, avisa físicamente a caja cuando termina; el estado pasa a
+    // READY únicamente vía el endpoint manual POST /orders/{id}/ready.
     orderRepository.save(order);
-
-    if (markedReady) {
-      Long tableId = order.getTable() != null ? order.getTable().getId() : null;
-      orderEventPublisher.publish(OrderEvent.Type.READY, order.getId(), tableId);
-    }
   }
 
   @Override
@@ -251,12 +270,6 @@ public class OrderServiceImpl implements OrderService {
 
     transactionRepository.save(transaction);
 
-    if (order.getType() == OrderType.DINE_IN) {
-        Table table = order.getTable();
-        table.free();
-        tableRepository.save(table);
-    }
-    
     Long tableId = order.getType() == OrderType.DINE_IN && order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
     OrderResponse result = orderMapper.toResponse(orderRepository.findByIdWithDetails(orderId).orElseThrow());
@@ -299,13 +312,6 @@ public class OrderServiceImpl implements OrderService {
     // Actualizar el estado de la orden
     if (isFullyPaid) {
         order.setStatus(OrderStatus.PAID);
-        
-        // Liberar mesa si está completamente pagado y es DINE_IN
-        if (order.getType() == OrderType.DINE_IN) {
-            Table table = order.getTable();
-            table.free();
-            tableRepository.save(table);
-        }
     } else {
         order.setStatus(OrderStatus.PARTIALLY_PAID);
     }
@@ -394,9 +400,12 @@ public class OrderServiceImpl implements OrderService {
       throw new BadRequestException("El item no pertenece al pedido especificado");
     }
 
-    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS) {
-      throw new BadRequestException("No se puede modificar un pedido que no está en estado CREATED o IN_PROGRESS");
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS
+        && order.getStatus() != OrderStatus.READY) {
+      throw new BadRequestException("No se puede modificar un pedido que no está en estado CREATED, IN_PROGRESS o READY");
     }
+
+    int previousQuantity = orderItem.getQuantity();
 
     if (request.isTakeaway() != null) {
       boolean newIsTakeaway = Boolean.TRUE.equals(request.isTakeaway()) || order.getType() == OrderType.TAKEAWAY;
@@ -411,6 +420,11 @@ public class OrderServiceImpl implements OrderService {
 
     orderItemRepository.save(orderItem);
     order.calculateTotal();
+    // Si la cantidad sube en un pedido READY, hay que cocinar más — vuelve a IN_PROGRESS.
+    // Si baja (o se mantiene), no hay nada nuevo que preparar, se queda como está.
+    if (order.getStatus() == OrderStatus.READY && request.quantity() > previousQuantity) {
+      order.setStatus(OrderStatus.IN_PROGRESS);
+    }
     Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     orderRepository.save(order);
     orderEventPublisher.publish(OrderEvent.Type.ITEM_UPDATED, orderId, tableId);
@@ -429,15 +443,17 @@ public class OrderServiceImpl implements OrderService {
       throw new BadRequestException("El item no pertenece al pedido especificado");
     }
 
-    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS) {
-      throw new BadRequestException("No se puede eliminar items de un pedido que no está en estado CREATED o IN_PROGRESS");
+    if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.IN_PROGRESS
+        && order.getStatus() != OrderStatus.READY) {
+      throw new BadRequestException("No se puede eliminar items de un pedido que no está en estado CREATED, IN_PROGRESS o READY");
     }
 
     Long tableId = order.getTable() != null ? order.getTable().getId() : null;
     order.removeItem(orderItem);
     orderItemRepository.delete(orderItem);
     order.calculateTotal();
-    if (order.getStatus() == OrderStatus.IN_PROGRESS && order.getItems().isEmpty()) {
+    if ((order.getStatus() == OrderStatus.IN_PROGRESS || order.getStatus() == OrderStatus.READY)
+        && order.getItems().isEmpty()) {
       order.setStatus(OrderStatus.CREATED);
     }
     orderRepository.save(order);
@@ -450,8 +466,11 @@ public class OrderServiceImpl implements OrderService {
     tableRepository.findById(tableId)
       .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada"));
 
-    Order activeOrder = orderRepository.findActiveOrderByTableId(tableId)
-      .orElseThrow(() -> new ResourceNotFoundException("No hay orden activa para esta mesa"));
+    List<Order> activeOrders = orderRepository.findActiveOrdersByTableId(tableId);
+    if (activeOrders.isEmpty()) {
+      throw new ResourceNotFoundException("No hay orden activa para esta mesa");
+    }
+    Order activeOrder = activeOrders.get(0);
 
     List<OrderItemResponse> items = new ArrayList<>();
 

@@ -143,6 +143,13 @@ public class Order extends AuditableEntity {
     this.status = OrderStatus.READY;
   }
 
+  public void markAsFinalized() {
+    if (this.status != OrderStatus.PAID) {
+      throw new IllegalStateException("Solo se puede finalizar un pedido pagado");
+    }
+    this.status = OrderStatus.FINALIZADO;
+  }
+
   public BigDecimal getPaidAmount() {
     return transactions.stream()
         .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)

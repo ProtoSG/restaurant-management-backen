@@ -8,7 +8,7 @@ import lombok.Getter;
 public class OrderEvent {
 
   public enum Type {
-    CREATED, UPDATED, CANCELLED, READY, PAID, ITEM_ADDED, ITEM_UPDATED, ITEM_REMOVED, TABLE_CHANGED
+    CREATED, UPDATED, CANCELLED, READY, PAID, FINALIZED, ITEM_ADDED, ITEM_UPDATED, ITEM_REMOVED, TABLE_CHANGED
   }
 
   private final Type type;

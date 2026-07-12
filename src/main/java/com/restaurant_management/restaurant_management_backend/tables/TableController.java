@@ -75,4 +75,16 @@ public class TableController {
     return ResponseEntity.noContent().build();
   }
 
+  // Admin escape hatch: finalizes any orders stuck in PAID for this table and
+  // forces the table back to FREE, regardless of its current status.
+  @PostMapping("/{id}/release")
+  public ResponseEntity<TableResponse> release(
+      @PathVariable Long id
+  ) {
+    TableResponse released = tableService.release(id);
+
+    return ResponseEntity.status(HttpStatus.OK)
+      .body(released);
+  }
+
 }

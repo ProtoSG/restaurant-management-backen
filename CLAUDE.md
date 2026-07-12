@@ -75,7 +75,7 @@ All requests pass through `JwtAuthFilter`. `SecurityConfig` enforces role-based 
 - Public: `/auth/login`, `/auth/refresh`, `/v3/api-docs/**`, `/docs/**`
 - ADMIN only: `/auth/register`, `/config/**`, menu write ops (`POST/PUT/DELETE /menu/**`)
 - ADMIN or CASHIER: payment endpoints, `/analytics/**`
-- ADMIN or CHEF: `POST /orders/*/ready`
+- ADMIN, CASHIER or WAITER: `POST /orders/*/ready` (CHEF has no app access — kitchen ticket printer is the only kitchen-facing signal)
 - All other endpoints: any authenticated user
 
 `@EnableMethodSecurity` is active — use `@PreAuthorize` for finer-grained checks.

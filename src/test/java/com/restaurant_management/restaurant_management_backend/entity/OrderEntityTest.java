@@ -229,4 +229,29 @@ class OrderEntityTest {
     assertThatThrownBy(order::markAsPaid)
       .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  void markAsFinalized_changesStatusToFinalizado() {
+    Order order = Order.builder()
+      .status(OrderStatus.PAID)
+      .total(BigDecimal.valueOf(100))
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    order.markAsFinalized();
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.FINALIZADO);
+  }
+
+  @Test
+  void markAsFinalized_throwsWhenNotPaid() {
+    Order order = Order.builder()
+      .status(OrderStatus.READY)
+      .total(BigDecimal.valueOf(100))
+      .transactions(new LinkedHashSet<>())
+      .build();
+
+    assertThatThrownBy(order::markAsFinalized)
+      .isInstanceOf(IllegalStateException.class);
+  }
 }
