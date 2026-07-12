@@ -121,6 +121,12 @@ public class OrderController {
     return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
   }
 
+  @PostMapping("/{id}/finalize")
+  public ResponseEntity<OrderResponse> finalizeOrder(@PathVariable Long id) {
+    OrderResponse orderDTO = orderService.finalizeOrder(id);
+    return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
+  }
+
   @GetMapping("/{id}/kitchen/pending")
   public ResponseEntity<OrderResponse> getKitchenPending(@PathVariable Long id) {
     return ResponseEntity.ok(orderService.getKitchenPending(id));

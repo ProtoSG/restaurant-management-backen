@@ -59,6 +59,13 @@ public class Table extends AuditableEntity {
     this.status = TableStatus.FREE;
   }
 
+  // Unlike free(), does not validate the prior state. Used as an admin escape hatch
+  // to recover a table left stuck (e.g. a dine-in order sitting in PAID forever
+  // because nobody hit "finalize").
+  public void forceFree() {
+    this.status = TableStatus.FREE;
+  }
+
   public void reserve() {
     if (this.status != TableStatus.FREE) {
       throw new IllegalStateException("Solo las mesas libres pueden reservarse");

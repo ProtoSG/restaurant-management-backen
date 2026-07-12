@@ -13,5 +13,6 @@ public interface TableService {
   public TableResponse findById(Long id);
   public TableResponse update(Long id, UpdateTableRequest req);
   public void deleteById(Long id);
+  public TableResponse release(Long id);
 
 }

@@ -12,6 +12,7 @@ import com.restaurant_management.restaurant_management_backend.orders.OrderRepos
 import com.restaurant_management.restaurant_management_backend.orders.OrderServiceImpl;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.AddOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymentRequest;
+import com.restaurant_management.restaurant_management_backend.orders.dto.request.UpdatedOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderResponse;
 import com.restaurant_management.restaurant_management_backend.orders.entity.Order;
 import com.restaurant_management.restaurant_management_backend.orders.entity.OrderItem;
@@ -204,7 +205,101 @@ class OrderServiceImplTest {
     assertThat(created.getTakeawaySurcharge()).isEqualByComparingTo(BigDecimal.valueOf(2));
   }
 
+  // ── updateOrderItem ──────────────────────────────────────────────────────────
+
+  @Test
+  void updateOrderItem_allowedWhenOrderIsReadyAndQuantityDecreases() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.READY).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    OrderItem item = new OrderItem();
+    item.setId(10L);
+    item.setQuantity(5);
+    item.setSubTotal(BigDecimal.valueOf(50));
+    item.setTakeawaySurcharge(BigDecimal.ZERO);
+    item.setOrder(order);
+    order.getItems().add(item);
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+    when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+    orderService.updateOrderItem(1L, 10L, new UpdatedOrderItemRequest(3, null, null));
+
+    assertThat(item.getQuantity()).isEqualTo(3);
+    // Bajar la cantidad no requiere cocinar más — se queda READY.
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.READY);
+  }
+
+  @Test
+  void updateOrderItem_revertsReadyToInProgressWhenQuantityIncreases() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.READY).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    OrderItem item = new OrderItem();
+    item.setId(10L);
+    item.setQuantity(1);
+    item.setSubTotal(BigDecimal.valueOf(10));
+    item.setTakeawaySurcharge(BigDecimal.ZERO);
+    item.setOrder(order);
+    order.getItems().add(item);
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+    when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+    orderService.updateOrderItem(1L, 10L, new UpdatedOrderItemRequest(2, null, null));
+
+    assertThat(item.getQuantity()).isEqualTo(2);
+    // Subir la cantidad significa cocinar más — vuelve a IN_PROGRESS.
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
+  }
+
+  @Test
+  void updateOrderItem_throwsWhenOrderIsPaid() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.PAID).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    OrderItem item = new OrderItem();
+    item.setId(10L);
+    item.setOrder(order);
+    order.getItems().add(item);
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+    when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+    assertThatThrownBy(() -> orderService.updateOrderItem(1L, 10L, new UpdatedOrderItemRequest(3, null, null)))
+      .isInstanceOf(BadRequestException.class);
+  }
+
   // ── removeOrderItem ──────────────────────────────────────────────────────────
+
+  @Test
+  void removeOrderItem_revertsReadyToCreatedWhenLastItemRemoved() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.READY).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    OrderItem item = new OrderItem();
+    item.setId(10L);
+    item.setSubTotal(BigDecimal.valueOf(20));
+    item.setTakeawaySurcharge(BigDecimal.ZERO);
+    item.setOrder(order);
+    order.getItems().add(item);
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+    when(orderItemRepository.findById(10L)).thenReturn(Optional.of(item));
+
+    orderService.removeOrderItemByOrderId(1L, 10L);
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+    assertThat(order.getItems()).isEmpty();
+  }
 
   @Test
   void removeOrderItem_revertsInProgressToCreatedWhenLastItemRemoved() {
@@ -252,6 +347,52 @@ class OrderServiceImplTest {
       .isInstanceOf(BadRequestException.class);
   }
 
+  // ── delete ───────────────────────────────────────────────────────────────────
+
+  @Test
+  void delete_freesTableForDineIn() {
+    Table table = Table.builder().id(2L).status(TableStatus.OCCUPIED).build();
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.IN_PROGRESS).type(OrderType.DINE_IN)
+      .table(table).items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+    orderService.delete(1L);
+
+    assertThat(table.getStatus()).isEqualTo(TableStatus.FREE);
+    verify(orderRepository).delete(order);
+  }
+
+  @Test
+  void delete_throwsWhenOrderIsPaid() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.PAID).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+    assertThatThrownBy(() -> orderService.delete(1L))
+      .isInstanceOf(BadRequestException.class);
+    verify(orderRepository, never()).delete(any());
+  }
+
+  @Test
+  void delete_throwsWhenOrderIsFinalizado() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.FINALIZADO).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+    assertThatThrownBy(() -> orderService.delete(1L))
+      .isInstanceOf(BadRequestException.class);
+    verify(orderRepository, never()).delete(any());
+  }
+
   // ── cancelOrder ──────────────────────────────────────────────────────────────
 
   @Test
@@ -284,6 +425,85 @@ class OrderServiceImplTest {
     orderService.cancelOrder(1L);
 
     assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+    verify(tableRepository, never()).save(any());
+  }
+
+  @Test
+  void cancelOrder_throwsWhenOrderIsPaid() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.PAID).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(order));
+
+    assertThatThrownBy(() -> orderService.cancelOrder(1L))
+      .isInstanceOf(BadRequestException.class);
+    verify(orderRepository, never()).save(any());
+  }
+
+  @Test
+  void cancelOrder_throwsWhenOrderIsFinalizado() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.FINALIZADO).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(order));
+
+    assertThatThrownBy(() -> orderService.cancelOrder(1L))
+      .isInstanceOf(BadRequestException.class);
+    verify(orderRepository, never()).save(any());
+  }
+
+  // ── finalizeOrder ────────────────────────────────────────────────────────────
+
+  @Test
+  void finalizeOrder_throwsWhenOrderNotPaid() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.READY).type(OrderType.DINE_IN)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(order));
+
+    assertThatThrownBy(() -> orderService.finalizeOrder(1L))
+      .isInstanceOf(IllegalStateException.class);
+    verify(tableRepository, never()).save(any());
+  }
+
+  @Test
+  void finalizeOrder_freesTableForDineIn() {
+    Table table = Table.builder().id(2L).status(TableStatus.OCCUPIED).build();
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.PAID).type(OrderType.DINE_IN)
+      .table(table)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(order));
+    when(orderMapper.toResponse(any())).thenReturn(mock(OrderResponse.class));
+
+    orderService.finalizeOrder(1L);
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.FINALIZADO);
+    assertThat(table.getStatus()).isEqualTo(TableStatus.FREE);
+    verify(tableRepository).save(table);
+  }
+
+  @Test
+  void finalizeOrder_doesNotTouchTableForTakeaway() {
+    Order order = Order.builder()
+      .id(1L).status(OrderStatus.PAID).type(OrderType.TAKEAWAY)
+      .items(new LinkedHashSet<>()).transactions(new LinkedHashSet<>())
+      .build();
+
+    when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(order));
+    when(orderMapper.toResponse(any())).thenReturn(mock(OrderResponse.class));
+
+    orderService.finalizeOrder(1L);
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.FINALIZADO);
     verify(tableRepository, never()).save(any());
   }
 
@@ -341,7 +561,7 @@ class OrderServiceImplTest {
   }
 
   @Test
-  void payPartialOrder_setsPaidAndFreesTableWhenAmountCoversTotal() {
+  void payPartialOrder_setsPaidButDoesNotFreeTableWhenAmountCoversTotal() {
     Table table = Table.builder().id(2L).status(TableStatus.OCCUPIED).build();
     Order order = Order.builder()
       .id(1L).status(OrderStatus.CREATED).type(OrderType.DINE_IN)
@@ -358,8 +578,9 @@ class OrderServiceImplTest {
       BigDecimal.valueOf(100), PaymentMethodType.CASH));
 
     assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
-    assertThat(table.getStatus()).isEqualTo(TableStatus.FREE);
-    verify(tableRepository).save(table);
+    // Pago adelantado: la mesa se libera recién al finalizar el pedido, no al pagar
+    assertThat(table.getStatus()).isEqualTo(TableStatus.OCCUPIED);
+    verify(tableRepository, never()).save(table);
   }
 
   @Test

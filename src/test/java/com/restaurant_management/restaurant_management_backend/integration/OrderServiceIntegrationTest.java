@@ -129,7 +129,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser(username = "admin")
-    void payOrder_setsPaidAndCreatesTransactionAndFreesTable() {
+    void payOrder_setsPaidAndCreatesTransactionButKeepsTableOccupied() {
         CreateOrderRequest req = new CreateOrderRequest(table.getId(), OrderType.DINE_IN, null);
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
@@ -145,9 +145,82 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         Order paid = orderRepository.findByIdWithDetails(orderId).orElseThrow();
         assertThat(paid.getStatus()).isEqualTo(OrderStatus.PAID);
 
+        // Pago adelantado: la mesa sigue ocupada hasta que el pedido se finalice
+        Table stillOccupied = tableRepository.findById(table.getId()).orElseThrow();
+        assertThat(stillOccupied.getStatus()).isEqualTo(TableStatus.OCCUPIED);
+
+        assertThat(transactionRepository.findAll())
+            .anyMatch(t -> t.getOrder().getId().equals(orderId));
+    }
+
+    // ── finalizeOrder ────────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "admin")
+    void finalizeOrder_freesTableForDineInAfterPaid() {
+        CreateOrderRequest req = new CreateOrderRequest(table.getId(), OrderType.DINE_IN, null);
+        OrderResponse created = orderService.save(req);
+        Long orderId = created.id();
+
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.markAsReady(orderId);
+        orderService.payOrder(orderId, PaymentMethodType.CASH);
+
+        orderService.finalizeOrder(orderId);
+
+        Order finalized = orderRepository.findByIdWithDetails(orderId).orElseThrow();
+        assertThat(finalized.getStatus()).isEqualTo(OrderStatus.FINALIZADO);
+
         Table freed = tableRepository.findById(table.getId()).orElseThrow();
         assertThat(freed.getStatus()).isEqualTo(TableStatus.FREE);
+    }
 
+    @Test
+    @WithMockUser(username = "admin")
+    void finalizeOrder_throwsWhenOrderNotPaid() {
+        CreateOrderRequest req = new CreateOrderRequest(table.getId(), OrderType.DINE_IN, null);
+        OrderResponse created = orderService.save(req);
+        Long orderId = created.id();
+
+        assertThatThrownBy(() -> orderService.finalizeOrder(orderId))
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    // ── cancelOrder rejects paid/finalizado ─────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "admin")
+    void cancelOrder_throwsWhenOrderAlreadyPaid() {
+        CreateOrderRequest req = new CreateOrderRequest(table.getId(), OrderType.DINE_IN, null);
+        OrderResponse created = orderService.save(req);
+        Long orderId = created.id();
+
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.markAsReady(orderId);
+        orderService.payOrder(orderId, PaymentMethodType.CASH);
+
+        assertThatThrownBy(() -> orderService.cancelOrder(orderId))
+            .isInstanceOf(com.restaurant_management.restaurant_management_backend.shared.exceptions.BadRequestException.class);
+    }
+
+    // ── delete rejects paid/finalizado ──────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "admin")
+    void delete_throwsWhenOrderAlreadyPaid() {
+        CreateOrderRequest req = new CreateOrderRequest(table.getId(), OrderType.DINE_IN, null);
+        OrderResponse created = orderService.save(req);
+        Long orderId = created.id();
+
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.markAsReady(orderId);
+        orderService.payOrder(orderId, PaymentMethodType.CASH);
+
+        assertThatThrownBy(() -> orderService.delete(orderId))
+            .isInstanceOf(com.restaurant_management.restaurant_management_backend.shared.exceptions.BadRequestException.class);
+
+        // order and its payment transaction must still exist — no data loss
+        assertThat(orderRepository.findById(orderId)).isPresent();
         assertThat(transactionRepository.findAll())
             .anyMatch(t -> t.getOrder().getId().equals(orderId));
     }

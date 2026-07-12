@@ -54,13 +54,14 @@ class OrderRepositoryIntegrationTest extends AbstractIntegrationTest {
     @Test
     void findActiveOrder_returnsCreatedAndInProgressOrders() {
         Order active = orderRepository.save(order(OrderStatus.CREATED));
-        orderRepository.save(order(OrderStatus.PAID));
+        Order paid = orderRepository.save(order(OrderStatus.PAID));
+        orderRepository.save(order(OrderStatus.FINALIZADO));
         orderRepository.save(order(OrderStatus.CANCELLED));
 
         List<Order> result = orderRepository.findActiveOrder();
 
-        assertThat(result).extracting(Order::getId).contains(active.getId());
-        assertThat(result).noneMatch(o -> o.getStatus() == OrderStatus.PAID);
+        assertThat(result).extracting(Order::getId).contains(active.getId(), paid.getId());
+        assertThat(result).noneMatch(o -> o.getStatus() == OrderStatus.FINALIZADO);
         assertThat(result).noneMatch(o -> o.getStatus() == OrderStatus.CANCELLED);
     }
 
@@ -112,10 +113,10 @@ class OrderRepositoryIntegrationTest extends AbstractIntegrationTest {
         assertThat(result).isEmpty();
     }
 
-    // ── findActiveOrderByTableId ─────────────────────────────────────────────
+    // ── findActiveOrdersByTableId ─────────────────────────────────────────────
 
     @Test
-    void findActiveOrderByTableId_returnsActiveOrderForTable() {
+    void findActiveOrdersByTableId_returnsActiveOrderForTable() {
         Order active = orderRepository.save(
             Order.builder()
                 .orderCode("INT-T99-001")
@@ -128,15 +129,15 @@ class OrderRepositoryIntegrationTest extends AbstractIntegrationTest {
                 .build()
         );
 
-        Optional<Order> found = orderRepository.findActiveOrderByTableId(testTable.getId());
+        List<Order> found = orderRepository.findActiveOrdersByTableId(testTable.getId());
 
-        assertThat(found).isPresent();
-        assertThat(found.get().getId()).isEqualTo(active.getId());
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getId()).isEqualTo(active.getId());
     }
 
     @Test
-    void findActiveOrderByTableId_returnsEmptyWhenOnlyPaidOrderExists() {
-        orderRepository.save(
+    void findActiveOrdersByTableId_returnsPaidOrderStillOccupyingTable() {
+        Order paid = orderRepository.save(
             Order.builder()
                 .orderCode("INT-T99-PAID")
                 .type(OrderType.DINE_IN)
@@ -148,9 +149,64 @@ class OrderRepositoryIntegrationTest extends AbstractIntegrationTest {
                 .build()
         );
 
-        Optional<Order> found = orderRepository.findActiveOrderByTableId(testTable.getId());
+        List<Order> found = orderRepository.findActiveOrdersByTableId(testTable.getId());
+
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getId()).isEqualTo(paid.getId());
+    }
+
+    @Test
+    void findActiveOrdersByTableId_returnsEmptyWhenOnlyFinalizadoOrderExists() {
+        orderRepository.save(
+            Order.builder()
+                .orderCode("INT-T99-FIN")
+                .type(OrderType.DINE_IN)
+                .status(OrderStatus.FINALIZADO)
+                .table(testTable)
+                .total(BigDecimal.valueOf(50))
+                .items(new LinkedHashSet<>())
+                .transactions(new LinkedHashSet<>())
+                .build()
+        );
+
+        List<Order> found = orderRepository.findActiveOrdersByTableId(testTable.getId());
 
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    void findActiveOrdersByTableId_doesNotThrowWhenMultipleStragglersExist() {
+        // Regression: before this fix, >1 lingering PAID order for the same table
+        // (e.g. nobody hit "Finalizar") made getSingleResult-style queries blow up
+        // with NonUniqueResultException instead of degrading gracefully.
+        Order older = orderRepository.save(
+            Order.builder()
+                .orderCode("INT-T99-STRAY-1")
+                .type(OrderType.DINE_IN)
+                .status(OrderStatus.PAID)
+                .table(testTable)
+                .total(BigDecimal.valueOf(30))
+                .items(new LinkedHashSet<>())
+                .transactions(new LinkedHashSet<>())
+                .build()
+        );
+        Order newer = orderRepository.save(
+            Order.builder()
+                .orderCode("INT-T99-STRAY-2")
+                .type(OrderType.DINE_IN)
+                .status(OrderStatus.PAID)
+                .table(testTable)
+                .total(BigDecimal.valueOf(45))
+                .items(new LinkedHashSet<>())
+                .transactions(new LinkedHashSet<>())
+                .build()
+        );
+
+        List<Order> found = orderRepository.findActiveOrdersByTableId(testTable.getId());
+
+        assertThat(found).hasSize(2);
+        assertThat(found.get(0).getId()).isEqualTo(newer.getId());
+        assertThat(found.get(1).getId()).isEqualTo(older.getId());
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
