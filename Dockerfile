@@ -23,7 +23,11 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# Parchar paquetes del SO de la base (p.ej. p11-kit) a la última versión de Alpine
+# Parchar paquetes del SO de la base (p.ej. p11-kit, libexpat) a la última versión
+# de Alpine. CACHEBUST invalida esta capa en cada build — con cache-to: type=gha
+# el resultado de "apk upgrade" quedaba cacheado indefinidamente y nunca traía
+# CVEs parchados después del build inicial.
+ARG CACHEBUST=1
 RUN apk upgrade --no-cache
 
 # Usuario no-root por seguridad
