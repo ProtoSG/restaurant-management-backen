@@ -59,9 +59,9 @@ class TableServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
         orderService.markAsReady(orderId);
-        orderService.payOrder(orderId, PaymentMethodType.CASH);
+        orderService.payOrder(orderId, PaymentMethodType.CASH, null);
 
         // Simulate the bug: order left PAID, nobody finalizes it, table stuck OCCUPIED
         Table stuck = tableRepository.findById(table.getId()).orElseThrow();
@@ -93,7 +93,7 @@ class TableServiceIntegrationTest extends AbstractIntegrationTest {
     void release_rejectsWhenAnUnpaidOrderIsStillActive() {
         CreateOrderRequest req = new CreateOrderRequest(table.getId(), OrderType.DINE_IN, null);
         OrderResponse created = orderService.save(req);
-        orderService.addOrderItem(created.id(), new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(created.id(), new AddOrderItemRequest(product.getId(), 1, null, false, null));
 
         assertThatThrownBy(() -> tableService.release(table.getId()))
             .isInstanceOf(BadRequestException.class)

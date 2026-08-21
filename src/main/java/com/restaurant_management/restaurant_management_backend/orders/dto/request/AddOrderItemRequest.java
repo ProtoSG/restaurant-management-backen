@@ -1,5 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.orders.dto.request;
 
+import java.math.BigDecimal;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -14,6 +16,8 @@ public record AddOrderItemRequest(
 
   String notes,
 
-  Boolean isTakeaway
+  Boolean isTakeaway,
+
+  BigDecimal selectedPrice
 
 ) {}

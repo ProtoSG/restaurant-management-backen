@@ -44,17 +44,26 @@ public class OrderItemMapper {
       orderItem.getProduct().getName(),
       orderItem.getProduct().getPrice(),
       category,
-      orderItem.getProduct().getIsAvailable()
+      orderItem.getProduct().getIsAvailable(),
+      java.util.Collections.emptyList()
     );
+
+    // unitPrice es el precio realmente cobrado en esta línea (base o de variante);
+    // no confundir con product.price, que puede no coincidir si el producto tiene variantes.
+    java.math.BigDecimal unitPrice = orderItem.getUnitPrice() != null
+      ? orderItem.getUnitPrice()
+      : orderItem.getProduct().getPrice();
 
     return new OrderItemResponse(
       orderItem.getId(),
       quantity,
+      unitPrice,
       subTotal,
       productResponse,
       orderItem.getNotes(),
       orderItem.getIsTakeaway(),
-      orderItem.getTakeawaySurcharge()
+      orderItem.getTakeawaySurcharge(),
+      orderItem.getKitchenPrintedQuantity()
     );
   }
 
