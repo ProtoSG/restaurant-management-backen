@@ -32,7 +32,7 @@
 		     Patches dentro del mismo minor; quitar cuando Boot suba a estas versiones. -->
 		<tomcat.version>10.1.55</tomcat.version>
 		<jackson-bom.version>2.21.4</jackson-bom.version>
-		<postgresql.version>42.7.11</postgresql.version>
+		<postgresql.version>42.7.12</postgresql.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -52,6 +52,7 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
+			<version>${postgresql.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
