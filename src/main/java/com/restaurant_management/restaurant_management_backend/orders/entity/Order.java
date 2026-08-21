@@ -89,6 +89,14 @@ public class Order extends AuditableEntity {
   @Column(name = "closed_at")
   private LocalDateTime closedAt;
 
+  // Advisory lock: marca que un envío a cocina está en curso, para que dos
+  // intentos concurrentes (dos dispositivos o dos taps rápidos) no impriman
+  // el mismo delta duplicado. Se limpia en confirmKitchen() al confirmar el
+  // envío, y expira solo por TTL si nunca se confirma (impresión fallida) —
+  // no requiere un endpoint manual de desbloqueo.
+  @Column(name = "kitchen_send_locked_at")
+  private LocalDateTime kitchenSendLockedAt;
+
   public void assignToTable(Table table) {
     if (this.type != OrderType.DINE_IN) {
       throw new IllegalStateException("Sólo las órdenes de 'DINE_IN' se pueden asignar a una mesa");
@@ -128,8 +136,8 @@ public class Order extends AuditableEntity {
   }
 
   public void markAsPaid() {
-    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.READY
-        && this.status != OrderStatus.PARTIALLY_PAID) {
+    if (this.status != OrderStatus.CREATED && this.status != OrderStatus.IN_PROGRESS
+        && this.status != OrderStatus.READY && this.status != OrderStatus.PARTIALLY_PAID) {
       throw new IllegalStateException("Order no puede ser pagado en este estado: " + this.status);
     }
     this.status = OrderStatus.PAID;
@@ -141,6 +149,13 @@ public class Order extends AuditableEntity {
       throw new IllegalStateException("Solo órdenes IN_PROGRESS pueden marcarse como listas");
     }
     this.status = OrderStatus.READY;
+  }
+
+  public void markAsFinalized() {
+    if (this.status != OrderStatus.PAID) {
+      throw new IllegalStateException("Solo se puede finalizar un pedido pagado");
+    }
+    this.status = OrderStatus.FINALIZADO;
   }
 
   public BigDecimal getPaidAmount() {

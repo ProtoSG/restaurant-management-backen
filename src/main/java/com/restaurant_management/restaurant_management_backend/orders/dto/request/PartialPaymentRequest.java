@@ -13,5 +13,7 @@ public record PartialPaymentRequest(
   BigDecimal amount,
 
   @NotNull(message = "El método de pago es obligatorio")
-  PaymentMethodType paymentMethod
+  PaymentMethodType paymentMethod,
+
+  String idempotencyKey
 ) {}

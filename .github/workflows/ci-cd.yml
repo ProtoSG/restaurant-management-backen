@@ -65,6 +65,8 @@ jobs:
           context: .
           load: true
           tags: ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: |
+            CACHEBUST=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Scan image (Trivy)

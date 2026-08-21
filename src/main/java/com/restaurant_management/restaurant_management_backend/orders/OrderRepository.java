@@ -28,9 +28,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
          "LEFT JOIN FETCH i.product p " +
          "LEFT JOIN FETCH p.category " +
          "LEFT JOIN FETCH o.transactions " +
-         "WHERE o.table.id = :tableId AND o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') " +
+         "WHERE o.table.id = :tableId AND o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID', 'PAID') " +
          "ORDER BY o.id DESC")
-  Optional<Order> findActiveOrderByTableId(@Param("tableId") Long tableId);
+  List<Order> findActiveOrdersByTableId(@Param("tableId") Long tableId);
 
   @Query("SELECT DISTINCT o FROM Order o " +
          "LEFT JOIN FETCH o.table " +
@@ -66,7 +66,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
          "LEFT JOIN FETCH i.product p " +
          "LEFT JOIN FETCH p.category " +
          "LEFT JOIN FETCH o.transactions " +
-         "WHERE o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID') " +
+         "WHERE o.status IN ('CREATED', 'IN_PROGRESS', 'READY', 'PARTIALLY_PAID', 'PAID') " +
          "ORDER BY o.id ASC")
   List<Order> findActiveOrder();
 

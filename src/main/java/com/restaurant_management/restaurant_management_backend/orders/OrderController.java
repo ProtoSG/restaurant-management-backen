@@ -17,6 +17,7 @@ import com.restaurant_management.restaurant_management_backend.orders.dto.reques
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.CreateOrderRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.KitchenConfirmRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.PartialPaymentRequest;
+import com.restaurant_management.restaurant_management_backend.orders.dto.request.PayOrderRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.request.UpdatedOrderItemRequest;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.ActiveOrderResponse;
 import com.restaurant_management.restaurant_management_backend.orders.dto.response.OrderResponse;
@@ -121,6 +122,12 @@ public class OrderController {
     return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
   }
 
+  @PostMapping("/{id}/finalize")
+  public ResponseEntity<OrderResponse> finalizeOrder(@PathVariable Long id) {
+    OrderResponse orderDTO = orderService.finalizeOrder(id);
+    return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
+  }
+
   @GetMapping("/{id}/kitchen/pending")
   public ResponseEntity<OrderResponse> getKitchenPending(@PathVariable Long id) {
     return ResponseEntity.ok(orderService.getKitchenPending(id));
@@ -138,9 +145,11 @@ public class OrderController {
   @PostMapping("/{id}/pay/{paymentMethod}")
   public ResponseEntity<OrderResponse> payOrder(
       @PathVariable Long id,
-      @PathVariable PaymentMethodType paymentMethod
+      @PathVariable PaymentMethodType paymentMethod,
+      @RequestBody(required = false) PayOrderRequest request
   ) {
-    OrderResponse orderDTO = orderService.payOrder(id, paymentMethod);
+    String idempotencyKey = request != null ? request.idempotencyKey() : null;
+    OrderResponse orderDTO = orderService.payOrder(id, paymentMethod, idempotencyKey);
 
     return ResponseEntity.status(HttpStatus.OK).body(orderDTO);
   }

@@ -46,14 +46,29 @@ public class SecurityConfig {
         .requestMatchers("/v3/api-docs/**", "/docs/**").permitAll()
         // Payments — ADMIN or CASHIER only
         .requestMatchers(HttpMethod.POST, "/orders/*/pay/**", "/orders/*/pay-partial").hasAnyRole("ADMIN", "CASHIER")
-        // Mark as ready — ADMIN or CHEF
-        .requestMatchers(HttpMethod.POST, "/orders/*/ready").hasAnyRole("ADMIN", "CHEF")
+        // Mark as ready — ADMIN, CASHIER or WAITER (CHEF has no app access; cashier/waiter
+        // mark it manually when kitchen signals physically that the order is done)
+        .requestMatchers(HttpMethod.POST, "/orders/*/ready").hasAnyRole("ADMIN", "CASHIER", "WAITER")
+        // Finalize order (release table after client left) — same roles as mark as ready
+        .requestMatchers(HttpMethod.POST, "/orders/*/finalize").hasAnyRole("ADMIN", "CASHIER", "WAITER")
+        // Delete order — deleting a full order (and cascading its payment transactions
+        // via orphanRemoval) is an administrative action, not waiter/cashier-level
+        .requestMatchers(HttpMethod.DELETE, "/orders/*").hasRole("ADMIN")
         // Analytics — ADMIN or CASHIER
         .requestMatchers("/analytics/**").hasAnyRole("ADMIN", "CASHIER")
+        // Quick notes — readable by any authenticated staff (waiters take orders)
+        .requestMatchers(HttpMethod.GET, "/config/quick-notes").authenticated()
         // System config — ADMIN only
         .requestMatchers("/config/**").hasRole("ADMIN")
         // User management — ADMIN only
         .requestMatchers("/users/**").hasRole("ADMIN")
+        // Release a stuck table (force-finalizes any lingering PAID orders and frees
+        // the table) — ADMIN only, same rationale as the DELETE order guard above
+        .requestMatchers(HttpMethod.POST, "/tables/*/release").hasRole("ADMIN")
+        // Table write operations — ADMIN only
+        .requestMatchers(HttpMethod.POST, "/tables/**").hasRole("ADMIN")
+        .requestMatchers(HttpMethod.PUT, "/tables/**").hasRole("ADMIN")
+        .requestMatchers(HttpMethod.DELETE, "/tables/**").hasRole("ADMIN")
         // Menu write operations — ADMIN only
         .requestMatchers(HttpMethod.POST, "/categories/**", "/products/**").hasRole("ADMIN")
         .requestMatchers(HttpMethod.PUT, "/categories/**", "/products/**").hasRole("ADMIN")

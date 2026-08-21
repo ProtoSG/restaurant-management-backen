@@ -27,9 +27,10 @@ public interface OrderService {
   public void removeOrderItemByOrderId(Long orderId, Long itemId);
 
   public OrderResponse markAsReady(Long orderId);
+  public OrderResponse finalizeOrder(Long orderId);
   public OrderResponse getKitchenPending(Long orderId);
   public void confirmKitchen(Long orderId, List<KitchenLineRef> lines);
-  public OrderResponse payOrder(Long orderId, PaymentMethodType paymentMethodType);
+  public OrderResponse payOrder(Long orderId, PaymentMethodType paymentMethodType, String idempotencyKey);
   public OrderResponse payPartialOrder(Long orderId, PartialPaymentRequest paymentDTO);
 
   public List<OrderResponse> findActiveOrder();

@@ -46,6 +46,24 @@ class TableEntityTest {
   }
 
   @Test
+  void forceFree_changesStatusToFreeFromOccupied() {
+    Table table = Table.builder().status(TableStatus.OCCUPIED).build();
+
+    table.forceFree();
+
+    assertThat(table.getStatus()).isEqualTo(TableStatus.FREE);
+  }
+
+  @Test
+  void forceFree_doesNotThrowWhenAlreadyFree() {
+    Table table = Table.builder().status(TableStatus.FREE).build();
+
+    table.forceFree();
+
+    assertThat(table.getStatus()).isEqualTo(TableStatus.FREE);
+  }
+
+  @Test
   void reserve_changesStatusToReserved() {
     Table table = Table.builder().status(TableStatus.FREE).build();
 
