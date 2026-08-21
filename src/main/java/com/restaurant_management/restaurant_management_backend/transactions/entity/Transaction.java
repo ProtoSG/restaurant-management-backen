@@ -64,4 +64,7 @@ public class Transaction extends AuditableEntity {
 
   @Column(name = "reference", length = 255)
   private String reference;
+
+  @Column(name = "idempotency_key", length = 64)
+  private String idempotencyKey;
 }

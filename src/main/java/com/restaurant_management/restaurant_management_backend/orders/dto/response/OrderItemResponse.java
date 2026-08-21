@@ -7,9 +7,11 @@ import com.restaurant_management.restaurant_management_backend.menu.products.dto
 public record OrderItemResponse(
   Long id,
   Integer quantity,
+  BigDecimal unitPrice,
   BigDecimal subTotal,
   ProductResponse product,
   String notes,
   Boolean isTakeaway,
-  BigDecimal takeawaySurcharge
+  BigDecimal takeawaySurcharge,
+  Integer kitchenPrintedQuantity
 ) {}

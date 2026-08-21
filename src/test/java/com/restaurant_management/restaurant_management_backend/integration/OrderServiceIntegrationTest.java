@@ -87,7 +87,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
 
         orderService.addOrderItem(created.id(),
-            new AddOrderItemRequest(product.getId(), 2, null, false));
+            new AddOrderItemRequest(product.getId(), 2, null, false, null));
 
         Order updated = orderRepository.findByIdWithDetails(created.id()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
@@ -101,8 +101,8 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 2, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 2, null, false, null));
 
         Order updated = orderRepository.findByIdWithDetails(orderId).orElseThrow();
         assertThat(updated.getItems()).hasSize(1);
@@ -135,12 +135,12 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         Long orderId = created.id();
 
         // Add an item so the order has a non-zero total
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
 
         // Mark as ready first — payOrder works from CREATED/READY
         orderService.markAsReady(orderId);
 
-        orderService.payOrder(orderId, PaymentMethodType.CASH);
+        orderService.payOrder(orderId, PaymentMethodType.CASH, null);
 
         Order paid = orderRepository.findByIdWithDetails(orderId).orElseThrow();
         assertThat(paid.getStatus()).isEqualTo(OrderStatus.PAID);
@@ -162,9 +162,9 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
         orderService.markAsReady(orderId);
-        orderService.payOrder(orderId, PaymentMethodType.CASH);
+        orderService.payOrder(orderId, PaymentMethodType.CASH, null);
 
         orderService.finalizeOrder(orderId);
 
@@ -195,9 +195,9 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
         orderService.markAsReady(orderId);
-        orderService.payOrder(orderId, PaymentMethodType.CASH);
+        orderService.payOrder(orderId, PaymentMethodType.CASH, null);
 
         assertThatThrownBy(() -> orderService.cancelOrder(orderId))
             .isInstanceOf(com.restaurant_management.restaurant_management_backend.shared.exceptions.BadRequestException.class);
@@ -212,9 +212,9 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
         orderService.markAsReady(orderId);
-        orderService.payOrder(orderId, PaymentMethodType.CASH);
+        orderService.payOrder(orderId, PaymentMethodType.CASH, null);
 
         assertThatThrownBy(() -> orderService.delete(orderId))
             .isInstanceOf(com.restaurant_management.restaurant_management_backend.shared.exceptions.BadRequestException.class);
@@ -234,7 +234,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 2, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 2, null, false, null));
         orderService.markAsReady(orderId);
 
         Order withItems = orderRepository.findByIdWithDetails(orderId).orElseThrow();
@@ -243,7 +243,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
 
         // First payment — partial
         orderService.payPartialOrder(orderId,
-            new PartialPaymentRequest(half, PaymentMethodType.CASH));
+            new PartialPaymentRequest(half, PaymentMethodType.CASH, null));
 
         Order afterFirst = orderRepository.findByIdWithDetails(orderId).orElseThrow();
         assertThat(afterFirst.getStatus()).isEqualTo(OrderStatus.PARTIALLY_PAID);
@@ -251,7 +251,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         // Second payment — covers remainder
         BigDecimal remaining = afterFirst.getRemainingAmount();
         orderService.payPartialOrder(orderId,
-            new PartialPaymentRequest(remaining, PaymentMethodType.CREDITCARD));
+            new PartialPaymentRequest(remaining, PaymentMethodType.CREDITCARD, null));
 
         Order afterSecond = orderRepository.findByIdWithDetails(orderId).orElseThrow();
         assertThat(afterSecond.getStatus()).isEqualTo(OrderStatus.PAID);
@@ -264,7 +264,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
         OrderResponse created = orderService.save(req);
         Long orderId = created.id();
 
-        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false));
+        orderService.addOrderItem(orderId, new AddOrderItemRequest(product.getId(), 1, null, false, null));
         orderService.markAsReady(orderId);
 
         Order withItems = orderRepository.findByIdWithDetails(orderId).orElseThrow();
@@ -272,7 +272,7 @@ class OrderServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertThatThrownBy(() ->
             orderService.payPartialOrder(orderId,
-                new PartialPaymentRequest(overAmount, PaymentMethodType.CASH)))
+                new PartialPaymentRequest(overAmount, PaymentMethodType.CASH, null)))
             .isInstanceOf(IllegalArgumentException.class);
     }
 }

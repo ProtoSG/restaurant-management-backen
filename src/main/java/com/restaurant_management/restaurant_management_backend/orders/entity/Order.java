@@ -89,6 +89,14 @@ public class Order extends AuditableEntity {
   @Column(name = "closed_at")
   private LocalDateTime closedAt;
 
+  // Advisory lock: marca que un envío a cocina está en curso, para que dos
+  // intentos concurrentes (dos dispositivos o dos taps rápidos) no impriman
+  // el mismo delta duplicado. Se limpia en confirmKitchen() al confirmar el
+  // envío, y expira solo por TTL si nunca se confirma (impresión fallida) —
+  // no requiere un endpoint manual de desbloqueo.
+  @Column(name = "kitchen_send_locked_at")
+  private LocalDateTime kitchenSendLockedAt;
+
   public void assignToTable(Table table) {
     if (this.type != OrderType.DINE_IN) {
       throw new IllegalStateException("Sólo las órdenes de 'DINE_IN' se pueden asignar a una mesa");

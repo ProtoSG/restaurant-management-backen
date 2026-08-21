@@ -59,13 +59,13 @@ class OrderItemEntityTest {
   }
 
   @Test
-  void assignProductCustomPrice_usesOverridePrice() {
+  void assignProductWithSelectedPrice_usesSelectedPrice() {
     Product product = Product.builder().price(BigDecimal.valueOf(15)).build();
 
     OrderItem item = new OrderItem();
     item.setTakeawaySurcharge(BigDecimal.ZERO);
 
-    item.assignProductCustomPrice(product, BigDecimal.valueOf(20), 3);
+    item.assignProductWithSelectedPrice(product, BigDecimal.valueOf(20), 3);
 
     // 20 * 3 = 60, NOT 15 * 3
     assertThat(item.getSubTotal()).isEqualByComparingTo(BigDecimal.valueOf(60));
@@ -73,13 +73,13 @@ class OrderItemEntityTest {
   }
 
   @Test
-  void assignProductCustomPrice_fallsBackToProductPriceWhenNullOverride() {
+  void assignProductWithSelectedPrice_fallsBackToProductPriceWhenNullSelection() {
     Product product = Product.builder().price(BigDecimal.valueOf(12)).build();
 
     OrderItem item = new OrderItem();
     item.setTakeawaySurcharge(BigDecimal.ZERO);
 
-    item.assignProductCustomPrice(product, null, 4);
+    item.assignProductWithSelectedPrice(product, null, 4);
 
     assertThat(item.getSubTotal()).isEqualByComparingTo(BigDecimal.valueOf(48));
     assertThat(item.getUnitPrice()).isEqualByComparingTo(BigDecimal.valueOf(12));

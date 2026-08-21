@@ -77,7 +77,7 @@ public class OrderItem extends AuditableEntity {
         .add(surcharge.multiply(BigDecimal.valueOf(quantity)));
   }
 
-  public void assignProductCustomPrice(Product product, BigDecimal price, Integer quantity) {
+  public void assignProductWithSelectedPrice(Product product, BigDecimal price, Integer quantity) {
     this.product = product;
     this.quantity = quantity;
     this.unitPrice = (price != null) ? price : product.getPrice();

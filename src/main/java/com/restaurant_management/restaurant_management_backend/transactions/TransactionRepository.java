@@ -2,6 +2,7 @@ package com.restaurant_management.restaurant_management_backend.transactions;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,8 @@ import com.restaurant_management.restaurant_management_backend.transactions.dto.
 import com.restaurant_management.restaurant_management_backend.transactions.entity.Transaction;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+
+  Optional<Transaction> findByOrder_IdAndIdempotencyKey(Long orderId, String idempotencyKey);
 
   @Query("SELECT new com.restaurant_management.restaurant_management_backend.transactions.dto.response.TransactionMountGroupByPaymentMethodResponse(" +
             "t.paymentMethod, " +
