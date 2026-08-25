@@ -30,10 +30,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.id = :id")
   Optional<Product> findByIdWithCategory(@Param("id") Long id);
 
-  @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.isAvailable = true")
+  @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.isAvailable = true ORDER BY p.name ASC")
   List<Product> findAllAvailableWithCategory();
 
-  @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE p.isAvailable = true",
+  @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE p.isAvailable = true ORDER BY p.name ASC",
       countQuery = "SELECT COUNT(p) FROM Product p WHERE p.isAvailable = true")
   Page<Product> findAllAvailableWithCategory(Pageable pageable);
 
