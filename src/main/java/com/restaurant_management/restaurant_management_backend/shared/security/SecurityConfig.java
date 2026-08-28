@@ -54,8 +54,8 @@ public class SecurityConfig {
         // Delete order — deleting a full order (and cascading its payment transactions
         // via orphanRemoval) is an administrative action, not waiter/cashier-level
         .requestMatchers(HttpMethod.DELETE, "/orders/*").hasRole("ADMIN")
-        // Analytics — ADMIN or CASHIER
-        .requestMatchers("/analytics/**").hasAnyRole("ADMIN", "CASHIER")
+        // Analytics — ADMIN only
+        .requestMatchers("/analytics/**").hasRole("ADMIN")
         // Quick notes — readable by any authenticated staff (waiters take orders)
         .requestMatchers(HttpMethod.GET, "/config/quick-notes").authenticated()
         // System config — ADMIN only
