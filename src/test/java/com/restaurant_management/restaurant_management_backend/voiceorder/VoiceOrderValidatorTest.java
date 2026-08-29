@@ -15,10 +15,13 @@ import com.restaurant_management.restaurant_management_backend.menu.products.Pro
 import com.restaurant_management.restaurant_management_backend.menu.products.entity.Product;
 import com.restaurant_management.restaurant_management_backend.menu.products.productvariants.ProductVariantRepository;
 import com.restaurant_management.restaurant_management_backend.menu.products.productvariants.entity.ProductVariant;
+import com.restaurant_management.restaurant_management_backend.tables.TableRepository;
+import com.restaurant_management.restaurant_management_backend.tables.entity.Table;
 import com.restaurant_management.restaurant_management_backend.voiceorder.dto.VoiceOrderExtraction;
 import com.restaurant_management.restaurant_management_backend.voiceorder.dto.VoiceOrderItemExtraction;
 import com.restaurant_management.restaurant_management_backend.voiceorder.dto.VoiceOrderItemStatus;
 import com.restaurant_management.restaurant_management_backend.voiceorder.dto.VoiceOrderPreview;
+import com.restaurant_management.restaurant_management_backend.voiceorder.dto.VoiceOrderTableStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -28,9 +31,14 @@ class VoiceOrderValidatorTest {
 
   @Mock ProductRepository productRepository;
   @Mock ProductVariantRepository productVariantRepository;
+  @Mock TableRepository tableRepository;
 
   @InjectMocks
   VoiceOrderValidator validator;
+
+  private static Table activeTable(long id, String number) {
+    return Table.builder().id(id).number(number).isActive(true).build();
+  }
 
   private static Product trioMarino(boolean available) {
     return trioMarino(available, BigDecimal.ZERO);
@@ -79,6 +87,7 @@ class VoiceOrderValidatorTest {
 
     when(productRepository.findByIdWithCategory(1L)).thenReturn(Optional.of(product));
     when(productVariantRepository.findByProductId(1L)).thenReturn(List.of(variant25));
+    when(tableRepository.findByNumber("8")).thenReturn(Optional.of(activeTable(100L, "8")));
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, null);
 
@@ -87,6 +96,8 @@ class VoiceOrderValidatorTest {
     assertThat(preview.items()).hasSize(1);
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
     assertThat(preview.items().get(0).productName()).isEqualTo("Trio Marino");
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.RESOLVED);
+    assertThat(preview.tableId()).isEqualTo(100L);
     assertThat(preview.allResolved()).isTrue();
   }
 
@@ -333,6 +344,7 @@ class VoiceOrderValidatorTest {
     when(productVariantRepository.findByProductId(1L)).thenReturn(List.of(marino25));
     when(productRepository.findByIdWithCategory(2L)).thenReturn(Optional.of(trioChaufa));
     when(productVariantRepository.findByProductId(2L)).thenReturn(Collections.emptyList());
+    when(tableRepository.findByNumber("8")).thenReturn(Optional.of(activeTable(100L, "8")));
 
     VoiceOrderItemExtraction resolvedItem = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, "sin ají");
     VoiceOrderItemExtraction mismatchItem = itemWithPrice("un trio chaufa de 99", 2L, new BigDecimal("99"), 1, null);
@@ -361,6 +373,7 @@ class VoiceOrderValidatorTest {
     when(productVariantRepository.findByProductId(1L)).thenReturn(List.of(marino25));
     when(productRepository.findByIdWithCategory(2L)).thenReturn(Optional.of(trioChaufa));
     when(productVariantRepository.findByProductId(2L)).thenReturn(List.of(chaufa30));
+    when(tableRepository.findByNumber("8")).thenReturn(Optional.of(activeTable(100L, "8")));
 
     VoiceOrderItemExtraction item1 = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, null);
     VoiceOrderItemExtraction item2 = itemWithPrice("un trio chaufa de 30", 2L, new BigDecimal("30"), 1, null);
@@ -371,14 +384,67 @@ class VoiceOrderValidatorTest {
   }
 
   @Test
-  void validate_emptyItemList_producesEmptyPreview() {
-    // Documents current behavior: an empty item list has no unresolved item, so allMatch()
-    // vacuously reports allResolved=true. The "low-confidence audio" scenario (no items
-    // extracted at all) is an extraction-layer concern, not this validator's — a caller must
-    // not treat an empty-items preview as "ready to confirm" on allResolved alone.
+  void validate_emptyItemList_stillRequiresTableToResolve() {
+    // An empty item list has no unresolved ITEM, so items-only would vacuously say "resolved" —
+    // but allResolved now also requires the table, so this must not be true just because there's
+    // nothing to check on the item side. The "low-confidence audio" scenario (no items extracted
+    // at all) is still fundamentally an extraction-layer concern, not this validator's.
+    when(tableRepository.findByNumber("8")).thenReturn(Optional.of(activeTable(100L, "8")));
+
     VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(8), List.of()));
 
     assertThat(preview.items()).isEmpty();
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.RESOLVED);
     assertThat(preview.allResolved()).isTrue();
+  }
+
+  // ── Table resolution ─────────────────────────────────────────────────────
+
+  @Test
+  void validate_tableMissingWhenNoTableNumberDictated() {
+    VoiceOrderItemExtraction item = itemWithNeither("una coca", null, 1, null);
+
+    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.MISSING);
+    assertThat(preview.tableId()).isNull();
+    assertThat(preview.tableNumber()).isNull();
+  }
+
+  @Test
+  void validate_tableNotFoundWhenNumberDoesNotMatchAnyTable() {
+    when(tableRepository.findByNumber("99")).thenReturn(Optional.empty());
+
+    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(99), List.of()));
+
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_FOUND);
+    assertThat(preview.tableId()).isNull();
+    assertThat(preview.allResolved()).isFalse();
+  }
+
+  @Test
+  void validate_tableNotFoundWhenTableIsInactive() {
+    Table inactiveTable = Table.builder().id(100L).number("8").isActive(false).build();
+    when(tableRepository.findByNumber("8")).thenReturn(Optional.of(inactiveTable));
+
+    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(8), List.of()));
+
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_FOUND);
+    assertThat(preview.tableId()).isNull();
+  }
+
+  @Test
+  void validate_allResolvedIsFalseWhenItemsResolveButTableDoesNot() {
+    Product product = trioMarino(true, new BigDecimal("18.00"));
+    when(productRepository.findByIdWithCategory(1L)).thenReturn(Optional.of(product));
+    when(tableRepository.findByNumber("99")).thenReturn(Optional.empty());
+
+    VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 18", 1L, new BigDecimal("18"), 1, null);
+
+    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(99), List.of(item)));
+
+    assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_FOUND);
+    assertThat(preview.allResolved()).isFalse();
   }
 }

@@ -1,0 +1,24 @@
+meta {
+  name: Confirm Voice Order
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/voice-order-test/confirm
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tableNumber": 8,
+    "items": [
+      { "productId": 1, "selectedPrice": 25, "quantity": 1, "notes": "sin ají" }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Voice Order Capabilities
+  type: http
+  seq: 0
+}
+
+get {
+  url: {{base_url}}/voice-order-test/capabilities
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

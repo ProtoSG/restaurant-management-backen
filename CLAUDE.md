@@ -28,7 +28,7 @@ Dev DB: `localhost:5433`, user/pass `postgres/postgres`, db `ddbb_restaurant_man
 
 All endpoints are prefixed `/api` (`server.servlet.context-path` in `application.yml`).
 
-Required env vars (no defaults — app fails to start if missing): `JWT_SECRET_KEY` (base64 secret), `ADMIN_USERNAME` and `ADMIN_PASSWORD` (seed admin user), `ANTHROPIC_API_KEY` (voice-order extraction).
+Required env vars (no defaults — app fails to start if missing): `JWT_SECRET_KEY` (base64 secret), `ADMIN_USERNAME` and `ADMIN_PASSWORD` (seed admin user), `ANTHROPIC_API_KEY` (voice-order extraction), `OPENAI_API_KEY` (voice-order transcription — Whisper/gpt-4o-mini-transcribe).
 
 ## Architecture
 

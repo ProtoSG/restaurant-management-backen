@@ -35,6 +35,14 @@ spring:
     baseline-on-migrate: true
     baseline-version: 15
 
+  # Spring's default (1MB) is too small for a voice-order audio clip; explicit cap here so an
+  # oversized upload to /voice-order-test/audio is rejected before it reaches OpenAI, not just
+  # relying on their own 25MB limit.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 server:
   servlet:
     context-path: /api
