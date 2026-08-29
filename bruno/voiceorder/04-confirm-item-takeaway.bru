@@ -1,0 +1,26 @@
+meta {
+  name: Confirm Voice Order - Item-level Takeaway
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/voice-order-test/confirm
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tableNumber": 8,
+    "isTakeawayOrder": false,
+    "items": [
+      { "productId": 1, "selectedPrice": 25, "quantity": 1, "notes": "sin ají", "isTakeaway": false },
+      { "productId": 1, "selectedPrice": 25, "quantity": 1, "notes": null, "isTakeaway": true }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}

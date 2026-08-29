@@ -96,3 +96,28 @@ Feature: Tomar pedido por voz
     Cuando el mesero cierra la tablet sin tocar "Confirmar"
     Entonces la orden no se crea
     Y ningún ítem queda persistido en la base de datos
+
+  # "Para llevar" tiene dos niveles independientes -- no confundir uno con el otro:
+  #   1) TODO el pedido es para llevar y no hay mesa (isTakeawayOrder a nivel pedido).
+  #   2) Un ítem puntual es para llevar dentro de un pedido de mesa normal
+  #      (isTakeaway a nivel de ese ítem nada más).
+  Scenario: Pedido nuevo para llevar, sin mesa
+    Cuando el mesero dicta "para llevar, dos trio marisco"
+    Entonces se genera un preview con isTakeawayOrder=true
+    Y el preview no tiene mesa asociada
+    Y al confirmar se crea una orden nueva de tipo TAKEAWAY, sin tableId
+    Y esa orden nunca reutiliza una orden para llevar existente -- siempre es una orden nueva
+
+  Scenario: Un ítem puntual de un pedido de mesa es para llevar, el resto no
+    Cuando el mesero dicta "para la mesa 8, un trio marisco, y una coca para llevar"
+    Entonces se genera un preview con isTakeawayOrder=false y mesa 8
+    Y el ítem "Trio marisco" queda con isTakeaway=false
+    Y el ítem "coca" queda con isTakeaway=true
+    Y al confirmar ambos ítems se agregan a la misma orden de la mesa 8
+    Y el ítem "coca" lleva el recargo de para llevar si corresponde según su categoría
+
+  Scenario: Confirmar un pedido para llevar sin ningún ítem válido no crea nada
+    Dado que un ítem del pedido para llevar no matchea ningún producto del catálogo
+    Cuando el mesero intenta confirmar
+    Entonces la confirmación se rechaza
+    Y no se crea ninguna orden TAKEAWAY huérfana

@@ -63,19 +63,32 @@ class VoiceOrderValidatorTest {
       .build();
   }
 
+  private static VoiceOrderExtraction dineInExtraction(Optional<Integer> tableNumber, List<VoiceOrderItemExtraction> items) {
+    return new VoiceOrderExtraction(tableNumber, false, items);
+  }
+
+  private static VoiceOrderExtraction takeawayExtraction(List<VoiceOrderItemExtraction> items) {
+    return new VoiceOrderExtraction(Optional.empty(), true, items);
+  }
+
   private static VoiceOrderItemExtraction itemWithPrice(String rawText, Long productId, BigDecimal price, int quantity, String notes) {
+    return itemWithPrice(rawText, productId, price, quantity, notes, false);
+  }
+
+  private static VoiceOrderItemExtraction itemWithPrice(
+      String rawText, Long productId, BigDecimal price, int quantity, String notes, boolean isTakeaway) {
     return new VoiceOrderItemExtraction(
-      rawText, Optional.ofNullable(productId), Optional.ofNullable(price), Optional.empty(), quantity, notes);
+      rawText, Optional.ofNullable(productId), Optional.ofNullable(price), Optional.empty(), quantity, notes, isTakeaway);
   }
 
   private static VoiceOrderItemExtraction itemWithVariantName(String rawText, Long productId, String variantName, int quantity, String notes) {
     return new VoiceOrderItemExtraction(
-      rawText, Optional.ofNullable(productId), Optional.empty(), Optional.ofNullable(variantName), quantity, notes);
+      rawText, Optional.ofNullable(productId), Optional.empty(), Optional.ofNullable(variantName), quantity, notes, false);
   }
 
   private static VoiceOrderItemExtraction itemWithNeither(String rawText, Long productId, int quantity, String notes) {
     return new VoiceOrderItemExtraction(
-      rawText, Optional.ofNullable(productId), Optional.empty(), Optional.empty(), quantity, notes);
+      rawText, Optional.ofNullable(productId), Optional.empty(), Optional.empty(), quantity, notes, false);
   }
 
   // ── RESOLVED — spoken price ─────────────────────────────────────────────
@@ -91,7 +104,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(8), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.of(8), List.of(item)));
 
     assertThat(preview.items()).hasSize(1);
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
@@ -111,7 +124,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 18", 1L, new BigDecimal("18"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
   }
@@ -130,7 +143,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
   }
@@ -148,7 +161,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithVariantName("un ceviche mediano", 1L, "mediano", 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
     assertThat(preview.items().get(0).selectedPrice()).isEqualByComparingTo("25.00");
@@ -164,7 +177,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithVariantName("trio chaufa de pescado", 1L, "pescado", 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
     assertThat(preview.items().get(0).selectedPrice()).isEqualByComparingTo("30.00");
@@ -183,7 +196,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithNeither("una coca de un litro", 1L, 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
     assertThat(preview.items().get(0).selectedPrice()).isEqualByComparingTo("8.00");
@@ -201,7 +214,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithNeither("un ceviche", 1L, 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.PRICE_MISMATCH);
   }
@@ -219,7 +232,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 28", 1L, new BigDecimal("28"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.PRICE_MISMATCH);
     assertThat(preview.allResolved()).isFalse();
@@ -234,7 +247,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 30", 1L, new BigDecimal("30"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.PRICE_MISMATCH);
   }
@@ -249,7 +262,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithVariantName("un ceviche extra grande", 1L, "extra grande", 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.PRICE_MISMATCH);
   }
@@ -260,7 +273,7 @@ class VoiceOrderValidatorTest {
   void validate_marksNotFoundWhenProductIdIsEmpty() {
     VoiceOrderItemExtraction item = itemWithPrice("dos causas rellenas", null, new BigDecimal("15"), 2, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.NOT_FOUND);
     assertThat(preview.items().get(0).productName()).isNull();
@@ -273,7 +286,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un producto fantasma", 99L, new BigDecimal("10"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     // productId is echoed back even when invalid — so the mesero can see what the model guessed.
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.NOT_FOUND);
@@ -291,7 +304,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.NOT_AVAILABLE);
     assertThat(preview.items().get(0).productName()).isEqualTo("Trio Marino");
@@ -308,7 +321,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 20", 1L, new BigDecimal("20"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.NOT_AVAILABLE);
   }
@@ -323,7 +336,7 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithVariantName("un ceviche mediano", 1L, "mediano", 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.NOT_AVAILABLE);
   }
@@ -350,7 +363,7 @@ class VoiceOrderValidatorTest {
     VoiceOrderItemExtraction mismatchItem = itemWithPrice("un trio chaufa de 99", 2L, new BigDecimal("99"), 1, null);
 
     VoiceOrderPreview preview = validator.validate(
-      new VoiceOrderExtraction(Optional.of(8), List.of(resolvedItem, mismatchItem)));
+      dineInExtraction(Optional.of(8), List.of(resolvedItem, mismatchItem)));
 
     assertThat(preview.tableNumber()).isEqualTo(8);
     assertThat(preview.items()).hasSize(2);
@@ -378,7 +391,7 @@ class VoiceOrderValidatorTest {
     VoiceOrderItemExtraction item1 = itemWithPrice("un trio marino de 25", 1L, new BigDecimal("25"), 1, null);
     VoiceOrderItemExtraction item2 = itemWithPrice("un trio chaufa de 30", 2L, new BigDecimal("30"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(8), List.of(item1, item2)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.of(8), List.of(item1, item2)));
 
     assertThat(preview.allResolved()).isTrue();
   }
@@ -391,7 +404,7 @@ class VoiceOrderValidatorTest {
     // at all) is still fundamentally an extraction-layer concern, not this validator's.
     when(tableRepository.findByNumber("8")).thenReturn(Optional.of(activeTable(100L, "8")));
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(8), List.of()));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.of(8), List.of()));
 
     assertThat(preview.items()).isEmpty();
     assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.RESOLVED);
@@ -404,7 +417,7 @@ class VoiceOrderValidatorTest {
   void validate_tableMissingWhenNoTableNumberDictated() {
     VoiceOrderItemExtraction item = itemWithNeither("una coca", null, 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.empty(), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
     assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.MISSING);
     assertThat(preview.tableId()).isNull();
@@ -415,7 +428,7 @@ class VoiceOrderValidatorTest {
   void validate_tableNotFoundWhenNumberDoesNotMatchAnyTable() {
     when(tableRepository.findByNumber("99")).thenReturn(Optional.empty());
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(99), List.of()));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.of(99), List.of()));
 
     assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_FOUND);
     assertThat(preview.tableId()).isNull();
@@ -427,7 +440,7 @@ class VoiceOrderValidatorTest {
     Table inactiveTable = Table.builder().id(100L).number("8").isActive(false).build();
     when(tableRepository.findByNumber("8")).thenReturn(Optional.of(inactiveTable));
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(8), List.of()));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.of(8), List.of()));
 
     assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_FOUND);
     assertThat(preview.tableId()).isNull();
@@ -441,10 +454,59 @@ class VoiceOrderValidatorTest {
 
     VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 18", 1L, new BigDecimal("18"), 1, null);
 
-    VoiceOrderPreview preview = validator.validate(new VoiceOrderExtraction(Optional.of(99), List.of(item)));
+    VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.of(99), List.of(item)));
 
     assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
     assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_FOUND);
     assertThat(preview.allResolved()).isFalse();
+  }
+
+  // ── Takeaway (whole order and per-item) ─────────────────────────────────
+
+  @Test
+  void validate_takeawayOrder_skipsTableResolutionAndMarksNotApplicable() {
+    Product product = trioMarino(true, new BigDecimal("18.00"));
+    when(productRepository.findByIdWithCategory(1L)).thenReturn(Optional.of(product));
+
+    VoiceOrderItemExtraction item = itemWithPrice("un trio marino de 18", 1L, new BigDecimal("18"), 1, null);
+
+    VoiceOrderPreview preview = validator.validate(takeawayExtraction(List.of(item)));
+
+    assertThat(preview.isTakeawayOrder()).isTrue();
+    assertThat(preview.tableNumber()).isNull();
+    assertThat(preview.tableId()).isNull();
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_APPLICABLE);
+    assertThat(preview.allResolved()).isTrue();
+    // Never stubbed tableRepository — proves table resolution is skipped entirely, not resolved
+    // to some default.
+  }
+
+  @Test
+  void validate_takeawayOrder_allResolvedIsFalseWhenAnItemDoesNotResolve() {
+    VoiceOrderItemExtraction item = itemWithPrice("dos causas rellenas", null, new BigDecimal("15"), 2, null);
+
+    VoiceOrderPreview preview = validator.validate(takeawayExtraction(List.of(item)));
+
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.NOT_APPLICABLE);
+    assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.NOT_FOUND);
+    assertThat(preview.allResolved()).isFalse();
+  }
+
+  @Test
+  void validate_itemLevelTakeaway_passesThroughToPreviewItemWithoutAffectingTable() {
+    Product product = trioMarino(true, new BigDecimal("18.00"));
+    when(productRepository.findByIdWithCategory(1L)).thenReturn(Optional.of(product));
+    when(tableRepository.findByNumber("8")).thenReturn(Optional.of(activeTable(100L, "8")));
+
+    VoiceOrderItemExtraction dineInItem = itemWithPrice("un trio marino de 18", 1L, new BigDecimal("18"), 1, null, false);
+    VoiceOrderItemExtraction takeawayItem = itemWithPrice("una coca para llevar", 1L, new BigDecimal("18"), 1, null, true);
+
+    VoiceOrderPreview preview = validator.validate(
+      dineInExtraction(Optional.of(8), List.of(dineInItem, takeawayItem)));
+
+    assertThat(preview.isTakeawayOrder()).isFalse();
+    assertThat(preview.tableStatus()).isEqualTo(VoiceOrderTableStatus.RESOLVED);
+    assertThat(preview.items().get(0).isTakeaway()).isFalse();
+    assertThat(preview.items().get(1).isTakeaway()).isTrue();
   }
 }

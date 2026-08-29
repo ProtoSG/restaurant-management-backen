@@ -1,0 +1,25 @@
+meta {
+  name: Confirm Voice Order - Whole Order Takeaway (no table)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/voice-order-test/confirm
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tableNumber": null,
+    "isTakeawayOrder": true,
+    "items": [
+      { "productId": 1, "selectedPrice": 25, "quantity": 2, "notes": null, "isTakeaway": false }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}
