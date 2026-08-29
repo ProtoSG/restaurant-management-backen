@@ -37,6 +37,8 @@ application:
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY}
 
 cookie:
   secure: true

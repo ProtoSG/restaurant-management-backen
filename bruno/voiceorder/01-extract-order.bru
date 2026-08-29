@@ -1,0 +1,21 @@
+meta {
+  name: Extract Voice Order (ADMIN only)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/voice-order-test
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "text": "para la mesa 8, un trio marino de 25, un trio chaufa de 30, el primero sin ají"
+  }
+}
+
+assert {
+  res.status: eq 200
+}

@@ -28,7 +28,7 @@ Dev DB: `localhost:5433`, user/pass `postgres/postgres`, db `ddbb_restaurant_man
 
 All endpoints are prefixed `/api` (`server.servlet.context-path` in `application.yml`).
 
-Required env vars (no defaults — app fails to start if missing): `JWT_SECRET_KEY` (base64 secret), `ADMIN_USERNAME` and `ADMIN_PASSWORD` (seed admin user).
+Required env vars (no defaults — app fails to start if missing): `JWT_SECRET_KEY` (base64 secret), `ADMIN_USERNAME` and `ADMIN_PASSWORD` (seed admin user), `ANTHROPIC_API_KEY` (voice-order extraction).
 
 ## Architecture
 
@@ -45,6 +45,7 @@ Vertical slice layout — each domain is a self-contained package under `com.res
 | `analytics` | Reporting/metrics queries |
 | `websocket` | STOMP events on `/topic/orders` |
 | `shared` | Security, exceptions, enums, `SystemConfig` |
+| `voiceorder` | Experimental voice-order extraction — isolated, ADMIN-only, no writes |
 
 Each slice follows: `Controller → Service (interface + impl) → Repository → entity + DTOs + mapper`.
 
