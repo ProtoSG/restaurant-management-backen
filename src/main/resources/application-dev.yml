@@ -38,6 +38,13 @@ application:
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY}
+  # Optional for now (empty default) — Whisper is a pending decision, not committed yet. Only
+  # POST /voice-order-test/audio needs this; the app must still start without it. Switch back to
+  # fail-fast (${OPENAI_API_KEY}, no default) once Whisper is actually adopted.
+  openai:
+    api-key: ${OPENAI_API_KEY:}
 
 cookie:
   secure: false

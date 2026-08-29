@@ -21,7 +21,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
     "spring.flyway.baseline-version=0",
     "application.security.jwt.secret-key=dGVzdC1zZWNyZXQta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0cy1vbmx5LW5vdC1yZWFsLTEyMzQ1Ng==",
     "admin.default.username=admin",
-    "admin.default.password=admin123"
+    "admin.default.password=admin123",
+    // Fake keys — the voiceorder module's beans (AnthropicClient/OpenAIClient) construct
+    // locally with no network call, so these just need to satisfy Spring, not be real.
+    // No integration test exercises the voiceorder endpoints yet.
+    "application.anthropic.api-key=sk-ant-fake-key-for-integration-tests-only-not-real",
+    "application.openai.api-key=sk-fake-key-for-integration-tests-only-not-real"
 })
 public abstract class AbstractIntegrationTest {
 

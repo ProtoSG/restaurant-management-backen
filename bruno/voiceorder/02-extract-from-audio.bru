@@ -1,0 +1,19 @@
+meta {
+  name: Extract Voice Order (Audio)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/voice-order-test/audio
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  audio: @file()
+}
+
+assert {
+  res.status: eq 200
+}
