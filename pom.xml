@@ -34,6 +34,25 @@
 		<jackson-bom.version>2.21.4</jackson-bom.version>
 		<postgresql.version>42.7.12</postgresql.version>
 	</properties>
+	<!-- CVE pin: anthropic-java pulls httpcore5/httpclient5 transitively (not managed by
+	     Spring Boot's BOM, so no *.version property to override like the ones above).
+	     Trivy flagged httpcore5 5.3.6 for CVE-2026-54399/CVE-2026-54428 (HIGH, DoS via
+	     excessive/oversized headers); 5.4.3 is the fixed version. Remove once
+	     anthropic-java bumps its own httpclient5 dependency past this. -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.apache.httpcomponents.core5</groupId>
+				<artifactId>httpcore5</artifactId>
+				<version>5.4.3</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.core5</groupId>
+				<artifactId>httpcore5-h2</artifactId>
+				<version>5.4.3</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
