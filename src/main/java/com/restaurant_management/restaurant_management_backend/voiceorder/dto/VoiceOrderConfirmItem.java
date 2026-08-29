@@ -23,6 +23,8 @@ public record VoiceOrderConfirmItem(
   @NotNull(message = "La cantidad es obligatoria")
   Integer quantity,
 
-  String notes
+  String notes,
+
+  boolean isTakeaway
 
 ) {}

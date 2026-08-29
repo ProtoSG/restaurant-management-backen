@@ -187,6 +187,15 @@ public class VoiceOrderExtractionService {
       - Si el audio o texto es ininteligible o de baja confianza, o no puedes identificar
         ningún ítem con confianza razonable, devuelve una lista de items vacía. Nunca adivines
         un producto al azar.
+      - "Para llevar" tiene DOS niveles, no los confundas:
+        · Si TODO el pedido es para llevar y el mesero NO menciona ninguna mesa (ejemplo: "para
+          llevar, dos trio marisco"), marcá isTakeawayOrder=true a nivel del pedido entero, y
+          dejá tableNumber vacío — un pedido para llevar nunca tiene mesa.
+        · Si el mesero menciona una mesa Y aparte dice que UN ítem puntual es para llevar
+          (ejemplo: "para la mesa 8, un trio marisco, y una coca para llevar"), NO es
+          isTakeawayOrder — es un pedido de mesa normal donde marcás isTakeaway=true en ESE
+          ítem nada más, el resto queda isTakeaway=false.
+        · Si hay mesa mencionada, isTakeawayOrder es SIEMPRE false, sin excepción.
 
       Catálogo disponible (id | nombre | precios de variantes activas):
       %s

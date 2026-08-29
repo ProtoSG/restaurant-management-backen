@@ -48,8 +48,10 @@ import lombok.RequiredArgsConstructor;
  * <p>Also resolves the dictated table number against a real, active {@link Table} — {@code
  * Table.number} is a String in the schema (supports non-numeric codes like "BAR"), a mesero
  * always dictates a plain number, so lookup is by {@code Integer.toString(n)}. {@code
- * allResolved} requires the table to resolve too — an order can't be created for a table that
- * was never understood.
+ * allResolved} requires the table dimension to resolve too — either a real table
+ * ({@code RESOLVED}) or a takeaway order that legitimately has none
+ * ({@code isTakeawayOrder}, {@code NOT_APPLICABLE}) — an order can't be created for a table
+ * that was never understood, but a takeaway order isn't required to have one at all.
  */
 @Component
 @RequiredArgsConstructor
@@ -71,15 +73,24 @@ public class VoiceOrderValidator {
       .map(this::validateItem)
       .toList();
 
-    TableResolution tableResolution = resolveTable(extraction.tableNumber());
+    boolean isTakeawayOrder = Boolean.TRUE.equals(extraction.isTakeawayOrder());
+    // A takeaway order never has a table by design (OrderType.TAKEAWAY doesn't use one) — skip
+    // resolution entirely rather than trying to validate a tableNumber that shouldn't be there.
+    TableResolution tableResolution = isTakeawayOrder
+      ? new TableResolution(VoiceOrderTableStatus.NOT_APPLICABLE, null)
+      : resolveTable(extraction.tableNumber());
 
-    boolean allResolved = tableResolution.status() == VoiceOrderTableStatus.RESOLVED
+    boolean tableDimensionResolved = tableResolution.status() == VoiceOrderTableStatus.RESOLVED
+      || tableResolution.status() == VoiceOrderTableStatus.NOT_APPLICABLE;
+
+    boolean allResolved = tableDimensionResolved
       && previewItems.stream().allMatch(item -> item.status() == VoiceOrderItemStatus.RESOLVED);
 
     return new VoiceOrderPreview(
-      extraction.tableNumber().orElse(null),
+      isTakeawayOrder ? null : extraction.tableNumber().orElse(null),
       tableResolution.tableId(),
       tableResolution.status(),
+      isTakeawayOrder,
       previewItems,
       allResolved
     );
@@ -223,7 +234,8 @@ public class VoiceOrderValidator {
       productName,
       price,
       item.quantity(),
-      item.notes()
+      item.notes(),
+      Boolean.TRUE.equals(item.isTakeaway())
     );
   }
 }

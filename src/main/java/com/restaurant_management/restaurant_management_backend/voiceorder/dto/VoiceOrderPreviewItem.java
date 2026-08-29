@@ -11,6 +11,7 @@ public record VoiceOrderPreviewItem(
   String productName,  // resolved name if productId is valid, else null
   BigDecimal selectedPrice,
   Integer quantity,
-  String notes
+  String notes,
+  boolean isTakeaway
 
 ) {}

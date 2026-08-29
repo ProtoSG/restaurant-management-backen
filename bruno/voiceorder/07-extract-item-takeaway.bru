@@ -1,0 +1,21 @@
+meta {
+  name: Extract Voice Order - Item-level Takeaway (ADMIN only)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/voice-order-test
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "text": "para la mesa 8, un trio marisco de 25, y una coca para llevar"
+  }
+}
+
+assert {
+  res.status: eq 200
+}

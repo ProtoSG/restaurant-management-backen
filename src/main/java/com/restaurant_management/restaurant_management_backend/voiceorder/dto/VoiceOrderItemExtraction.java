@@ -42,6 +42,9 @@ public record VoiceOrderItemExtraction(
   Integer quantity,
 
   @JsonPropertyDescription("Any note attached to this item, including notes referring to it by position (e.g. 'el primero sin ají')")
-  String notes
+  String notes,
+
+  @JsonPropertyDescription("True ONLY if the mesero said THIS SPECIFIC item is for takeaway (e.g. 'el primero para llevar', 'una coca para llevar'), while the rest of the order stays dine-in. False by default — do NOT set this true just because the whole order is a takeaway order (see VoiceOrderExtraction.isTakeawayOrder for that case instead).")
+  Boolean isTakeaway
 
 ) {}

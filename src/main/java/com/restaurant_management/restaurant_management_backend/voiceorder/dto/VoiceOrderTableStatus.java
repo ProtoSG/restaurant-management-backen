@@ -7,5 +7,8 @@ public enum VoiceOrderTableStatus {
   /** No table number was dictated at all — the mesero needs to say which mesa. */
   MISSING,
   /** A table number was dictated, but no active table with that number exists. */
-  NOT_FOUND
+  NOT_FOUND,
+  /** The whole order is takeaway (isTakeawayOrder) — no table is needed, this dimension is
+   * satisfied by design, not by resolving anything. */
+  NOT_APPLICABLE
 }

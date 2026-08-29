@@ -1,0 +1,21 @@
+meta {
+  name: Extract Voice Order - Whole Order Takeaway (ADMIN only)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/voice-order-test
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "text": "para llevar, dos trio marisco"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
