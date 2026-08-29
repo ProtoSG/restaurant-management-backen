@@ -187,12 +187,11 @@ class VoiceOrderValidatorTest {
 
   @Test
   void validate_autoResolvesBasePriceWhenNeitherPriceNorVariantSpokenAndProductHasNoVariants() {
-    // "una coca de un litro" — nobody states the price out loud for a drink. Safe to auto-resolve
-    // because there's only one real price to disambiguate against.
+    // "una coca de un litro" — nobody states the price out loud for a drink. Only one real price
+    // exists, so there's nothing to disambiguate against.
     Product product = trioMarino(true, new BigDecimal("8.00"));
 
     when(productRepository.findByIdWithCategory(1L)).thenReturn(Optional.of(product));
-    when(productVariantRepository.findByProductId(1L)).thenReturn(Collections.emptyList());
 
     VoiceOrderItemExtraction item = itemWithNeither("una coca de un litro", 1L, 1, null);
 
@@ -203,20 +202,23 @@ class VoiceOrderValidatorTest {
   }
 
   @Test
-  void validate_ambiguousWhenNeitherPriceNorVariantSpokenAndProductHasVariants() {
-    // The mesero must disambiguate somehow (price or variant label) when more than one real
-    // price exists — guessing which tier they meant would violate "no default variant assumed".
+  void validate_autoResolvesBasePriceWhenNeitherPriceNorVariantSpokenEvenWhenProductHasVariants() {
+    // Changed from the earlier "ambiguous, reject" behavior: the base price is always a valid,
+    // orderable option regardless of how many variants exist (same principle as
+    // resolvesItemWhenPriceMatchesBasePriceEvenWhenProductHasVariants above), so it's the
+    // natural default when nothing was disambiguated — not an ambiguity to block on. The mesero
+    // corrects it to a variant from the review screen if that's not what they meant. No
+    // productVariantRepository stub needed: this branch no longer looks at variants at all.
     Product product = trioMarino(true, new BigDecimal("20.00"));
-    ProductVariant mediano = variant(10L, product, "Mediano", new BigDecimal("25.00"), true);
 
     when(productRepository.findByIdWithCategory(1L)).thenReturn(Optional.of(product));
-    when(productVariantRepository.findByProductId(1L)).thenReturn(List.of(mediano));
 
     VoiceOrderItemExtraction item = itemWithNeither("un ceviche", 1L, 1, null);
 
     VoiceOrderPreview preview = validator.validate(dineInExtraction(Optional.empty(), List.of(item)));
 
-    assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.PRICE_MISMATCH);
+    assertThat(preview.items().get(0).status()).isEqualTo(VoiceOrderItemStatus.RESOLVED);
+    assertThat(preview.items().get(0).selectedPrice()).isEqualByComparingTo("20.00");
   }
 
   // ── PRICE_MISMATCH ───────────────────────────────────────────────────────

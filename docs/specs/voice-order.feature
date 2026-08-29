@@ -54,11 +54,16 @@ Feature: Tomar pedido por voz
     Entonces el ítem del preview resuelve automáticamente al precio base
     Y no hace falta que el mesero diga el precio para un producto sin ambigüedad
 
-  Scenario: Ni precio ni variante dichos, y el producto SÍ tiene variantes
+  # Antes esto quedaba "sin resolver" por ambigüedad -- se cambió a favor del precio base
+  # porque el precio base es una opción tan válida como cualquiera de las variantes (mismo
+  # principio que "Ninguno es un caso especial del otro"), y es más útil resolver algo
+  # razonable que bloquear la confirmación por defecto. El mesero corrige a mano si en
+  # realidad quería una variante.
+  Scenario: Ni precio ni variante dichos, y el producto tiene variantes
     Dado que "Ceviche c/ chicharrón de pota" tiene variantes "Mediano" y "Grande"
     Cuando el mesero dicta "un ceviche" sin más detalle
-    Entonces el ítem del preview queda marcado "sin resolver"
-    Y no se asume ninguna variante por defecto -- hay más de un precio posible
+    Entonces el ítem del preview resuelve automáticamente al precio base
+    Y el mesero puede corregirlo a una variante desde la revisión si no era lo que quería
 
   Scenario: El producto dictado no existe en el catálogo
     Cuando el mesero dicta "dos causas rellenas"

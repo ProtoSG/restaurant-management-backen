@@ -34,10 +34,10 @@ import lombok.RequiredArgsConstructor;
  *       product's base price or its variants' real prices.</li>
  *   <li>A variant label was spoken instead ({@code variantName} present, e.g. "mediano",
  *       "pescado") — matched by name (case-insensitive) against the product's real variants.</li>
- *   <li>Neither was spoken — safe to auto-resolve ONLY if the product has no variants at all
- *       (a single real price, so there's nothing to disambiguate). If it has variants and the
- *       mesero named neither a price nor a variant, the item is ambiguous and must not be
- *       guessed.</li>
+ *   <li>Neither was spoken — defaults to the base price, whether or not the product has
+ *       variants. The base price is always a valid, orderable option (see below), so it's the
+ *       natural default rather than an ambiguity to reject; the mesero can still correct it to a
+ *       variant from the review screen if that's what they actually meant.</li>
  * </ol>
  *
  * <p>The base price is always a valid, orderable option — never a special case of "has no
@@ -171,14 +171,11 @@ public class VoiceOrderValidator {
       return resolveByVariantName(product, item.variantName().get());
     }
 
-    // Neither a price nor a variant label was spoken. Only safe to auto-resolve when the
-    // product has no variants — a single real price means there's nothing to disambiguate
-    // (e.g. "una coca de un litro", where nobody states the price out loud).
-    List<ProductVariant> allVariants = productVariantRepository.findByProductId(product.getId());
-    if (allVariants.isEmpty()) {
-      return new PriceResolution(VoiceOrderItemStatus.RESOLVED, product.getPrice());
-    }
-    return new PriceResolution(VoiceOrderItemStatus.PRICE_MISMATCH, null);
+    // Neither a price nor a variant label was spoken — default to the base price. The base
+    // price is always a valid, orderable option regardless of how many variants exist (see
+    // class javadoc), so it's the natural default when the mesero didn't disambiguate; if they
+    // actually meant a variant, the mesero can correct it from the review screen.
+    return new PriceResolution(VoiceOrderItemStatus.RESOLVED, product.getPrice());
   }
 
   private PriceResolution resolveBySpokenPrice(Product product, BigDecimal selectedPrice) {
