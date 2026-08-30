@@ -45,7 +45,7 @@ Vertical slice layout — each domain is a self-contained package under `com.res
 | `analytics` | Reporting/metrics queries |
 | `websocket` | STOMP events on `/topic/orders` |
 | `shared` | Security, exceptions, enums, `SystemConfig` |
-| `voiceorder` | Experimental voice-order extraction — isolated, ADMIN-only, no writes |
+| `voiceorder` | Voice-order extraction, validation, and confirm — ADMIN/CASHIER/WAITER |
 
 Each slice follows: `Controller → Service (interface + impl) → Repository → entity + DTOs + mapper`.
 
@@ -73,10 +73,10 @@ Each slice follows: `Controller → Service (interface + impl) → Repository �
 ## Security
 
 All requests pass through `JwtAuthFilter`. `SecurityConfig` enforces role-based access:
-- Public: `/auth/login`, `/auth/refresh`, `/v3/api-docs/**`, `/docs/**`
-- ADMIN only: `/auth/register`, `/config/**`, menu write ops (`POST/PUT/DELETE /menu/**`)
+- Public: `/auth/login`, `/auth/refresh`, `/auth/pin-login`, `/auth/pin-login-users`, `/v3/api-docs/**`, `/docs/**`
+- ADMIN only: `/auth/register`, `/config/**`, `/users/**` (incl. `PATCH/DELETE /users/{id}/pin`), menu write ops (`POST/PUT/DELETE /menu/**`)
 - ADMIN or CASHIER: payment endpoints, `/analytics/**`
-- ADMIN, CASHIER or WAITER: `POST /orders/*/ready` (CHEF has no app access — kitchen ticket printer is the only kitchen-facing signal)
+- ADMIN, CASHIER or WAITER: `POST /orders/*/ready`, `/voice-order-test/**` (CHEF has no app access — kitchen ticket printer is the only kitchen-facing signal)
 - All other endpoints: any authenticated user
 
 `@EnableMethodSecurity` is active — use `@PreAuthorize` for finer-grained checks.

@@ -22,10 +22,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Experimental, ADMIN-only endpoints for the voice-order extraction module. Extracts + validates
- * only — never writes to the database, never touches the real orders flow. Not wired into the
- * frontend; exists to exercise {@link VoiceTranscriptionService}, {@link VoiceOrderExtractionService},
- * and {@link VoiceOrderValidator} end to end.
+ * Voice-order endpoints — open to ADMIN, CASHIER, and WAITER (the roles that actually take
+ * orders; CHEF has no app access at all). {@code /confirm} is the only write: it turns a
+ * human-confirmed preview into a real order via {@link VoiceOrderConfirmService}. Everything
+ * else ({@code /capabilities}, the extract endpoints) is read-only — extraction + deterministic
+ * catalog validation, never a database write.
  */
 @RestController
 @RequestMapping("/voice-order-test")
@@ -49,7 +50,7 @@ public class VoiceOrderTestController {
    * actually configured so the client doesn't have to guess or fail an upload to find out.
    */
   @GetMapping("/capabilities")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'WAITER')")
   public ResponseEntity<VoiceOrderCapabilities> capabilities() {
     return ResponseEntity.ok(new VoiceOrderCapabilities(!openAiApiKey.isBlank()));
   }
@@ -60,14 +61,14 @@ public class VoiceOrderTestController {
    * Whisper isn't configured (see {@link #capabilities()}).
    */
   @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'WAITER')")
   public ResponseEntity<VoiceOrderPreview> extract(@RequestBody @Valid VoiceOrderTestRequest request) {
     return ResponseEntity.ok(extractAndValidate(request.text()));
   }
 
   /** Full path — audio in, validated preview out. Max upload size: 10MB (application.yml). */
   @PostMapping("/audio")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'WAITER')")
   public ResponseEntity<VoiceOrderPreview> extractFromAudio(@RequestParam("audio") MultipartFile audio) {
     String dictatedText = voiceTranscriptionService.transcribe(audio);
     return ResponseEntity.ok(extractAndValidate(dictatedText));
@@ -80,7 +81,7 @@ public class VoiceOrderTestController {
    * itself produced moments earlier.
    */
   @PostMapping("/confirm")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'WAITER')")
   public ResponseEntity<OrderResponse> confirm(@RequestBody @Valid VoiceOrderConfirmRequest request) {
     return ResponseEntity.ok(voiceOrderConfirmService.confirm(request));
   }
