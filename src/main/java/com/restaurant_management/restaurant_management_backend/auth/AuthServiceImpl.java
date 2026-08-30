@@ -1,6 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.auth;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,10 +12,13 @@ import org.springframework.stereotype.Service;
 
 import com.restaurant_management.restaurant_management_backend.auth.dto.internal.AuthResult;
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.LoginRequest;
+import com.restaurant_management.restaurant_management_backend.auth.dto.request.PinLoginRequest;
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.RegisterRequest;
+import com.restaurant_management.restaurant_management_backend.auth.dto.response.PinLoginCandidate;
 import com.restaurant_management.restaurant_management_backend.auth.entity.RefreshToken;
 import com.restaurant_management.restaurant_management_backend.auth.entity.Role;
 import com.restaurant_management.restaurant_management_backend.auth.entity.User;
+import com.restaurant_management.restaurant_management_backend.shared.enums.RoleName;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceConflictException;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.UnauthorizedException;
@@ -25,6 +29,14 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
+  // Roles allowed to use PIN login at all — deliberately excludes ADMIN: a 4-digit PIN is a
+  // much weaker secret than a real password, and ADMIN can touch config/users/deletions.
+  // CASHIER is included (handles payments) per explicit product decision; if that changes,
+  // this is the one place to narrow it back to WAITER only.
+  private static final List<RoleName> PIN_ELIGIBLE_ROLES = List.of(RoleName.WAITER, RoleName.CASHIER);
+  private static final int MAX_PIN_ATTEMPTS = 5;
+  private static final long PIN_LOCKOUT_MINUTES = 1;
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
@@ -136,6 +148,67 @@ public class AuthServiceImpl implements AuthService {
       accessToken,
       newRefreshToken
     );
+  }
+
+  @Override
+  public List<PinLoginCandidate> listPinLoginCandidates() {
+    return userRepository.findPinLoginCandidates(PIN_ELIGIBLE_ROLES).stream()
+      .map(u -> new PinLoginCandidate(u.getId(), u.getName()))
+      .toList();
+  }
+
+  @Override
+  @Transactional
+  public AuthResult pinLogin(PinLoginRequest req) {
+    // Same generic-error posture as password login — but enumeration here is a non-issue by
+    // design: every PIN-eligible userId is already public via listPinLoginCandidates(), the PIN
+    // itself is the only secret. Still one message for "no such candidate" and "wrong PIN" so a
+    // client can't distinguish a locked-but-real user from a made-up userId.
+    User user = userRepository.findById(req.userId())
+      .filter(u -> Boolean.TRUE.equals(u.getIsActive()))
+      .filter(u -> PIN_ELIGIBLE_ROLES.contains(u.getRole().getName()))
+      .filter(u -> u.getPinHash() != null)
+      .orElseThrow(() -> new UnauthorizedException("PIN incorrecto"));
+
+    if (user.getPinLockedUntil() != null && user.getPinLockedUntil().isAfter(LocalDateTime.now())) {
+      throw new UnauthorizedException("Demasiados intentos — esperá un minuto antes de volver a intentar");
+    }
+
+    if (!passwordEncoder.matches(req.pin(), user.getPinHash())) {
+      registerFailedPinAttempt(user);
+      throw new UnauthorizedException("PIN incorrecto");
+    }
+
+    user.setFailedPinAttempts(0);
+    user.setPinLockedUntil(null);
+    userRepository.save(user);
+
+    String jwtToken = jwtService.generateToken(user);
+    String refreshTokenStr = jwtService.generateRefreshToken(user);
+
+    refreshTokenRepository.revokeAllByUser(user);
+    saveRefreshToken(user, refreshTokenStr);
+
+    return new AuthResult(
+      user.getUsername(),
+      user.getRole().getName().name(),
+      jwtToken,
+      refreshTokenStr
+    );
+  }
+
+  // A 4-digit PIN has only 10,000 combinations — RateLimitFilter's per-IP throttle on
+  // /auth/pin-login covers the network angle, this covers the per-account angle (two staff
+  // sharing a network segment shouldn't be able to brute-force each other's PIN either).
+  private void registerFailedPinAttempt(User user) {
+    int attempts = user.getFailedPinAttempts() + 1;
+    if (attempts >= MAX_PIN_ATTEMPTS) {
+      user.setFailedPinAttempts(0);
+      user.setPinLockedUntil(LocalDateTime.now().plusMinutes(PIN_LOCKOUT_MINUTES));
+    } else {
+      user.setFailedPinAttempts(attempts);
+    }
+    userRepository.save(user);
   }
 
   private void saveRefreshToken(User user, String tokenStr) {

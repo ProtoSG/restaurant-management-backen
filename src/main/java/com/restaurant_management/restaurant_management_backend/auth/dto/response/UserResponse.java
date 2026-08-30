@@ -5,5 +5,6 @@ public record UserResponse(
   String name,
   String username,
   String role,
-  Boolean isActive
+  Boolean isActive,
+  Boolean hasPinEnabled
 ) {}

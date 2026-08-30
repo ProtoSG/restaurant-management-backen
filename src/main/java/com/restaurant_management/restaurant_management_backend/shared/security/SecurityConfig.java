@@ -42,6 +42,11 @@ public class SecurityConfig {
         .requestMatchers("/health").permitAll()
         // Auth endpoints — public
         .requestMatchers("/auth/login", "/auth/refresh").permitAll()
+        // PIN login — public by design: the name picker (pin-login-users) carries no secret,
+        // and pin-login itself has to be reachable before any session exists, same as /login.
+        // RateLimitFilter throttles it by IP; AuthServiceImpl adds a per-account lockout on
+        // top, since a 4-digit PIN is far weaker than a password.
+        .requestMatchers("/auth/pin-login", "/auth/pin-login-users").permitAll()
         // API docs — public in dev
         .requestMatchers("/v3/api-docs/**", "/docs/**").permitAll()
         // Payments — ADMIN or CASHIER only
