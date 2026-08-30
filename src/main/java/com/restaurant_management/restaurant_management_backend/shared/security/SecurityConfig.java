@@ -81,9 +81,10 @@ public class SecurityConfig {
         .requestMatchers(HttpMethod.DELETE, "/categories/**", "/products/**").hasRole("ADMIN")
         // Register new users — ADMIN only
         .requestMatchers(HttpMethod.POST, "/auth/register").hasRole("ADMIN")
-        // Voice-order extraction — experimental, unvalidated path (LLM extraction + no writes),
-        // ADMIN only until it's proven safe for WAITER/CASHIER use
-        .requestMatchers("/voice-order-test/**").hasRole("ADMIN")
+        // Voice-order — extraction/preview/confirm, real order writes on confirm. Was
+        // ADMIN-only during development; now open to the roles that actually take orders.
+        // CHEF stays excluded (no app access at all, per the roles table above).
+        .requestMatchers("/voice-order-test/**").hasAnyRole("ADMIN", "CASHIER", "WAITER")
         // Everything else requires authentication
         .anyRequest().authenticated()
       )
