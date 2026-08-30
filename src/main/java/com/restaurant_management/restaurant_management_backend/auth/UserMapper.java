@@ -14,7 +14,8 @@ public class UserMapper {
       user.getName(),
       user.getUsername(),
       user.getRole().getName().name(),
-      user.getIsActive()
+      user.getIsActive(),
+      user.getPinHash() != null
     );
   }
 }

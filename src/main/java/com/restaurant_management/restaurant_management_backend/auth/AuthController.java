@@ -1,5 +1,7 @@
 package com.restaurant_management.restaurant_management_backend.auth;
 
+import java.util.List;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -14,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant_management.restaurant_management_backend.auth.dto.internal.AuthResult;
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.LoginRequest;
+import com.restaurant_management.restaurant_management_backend.auth.dto.request.PinLoginRequest;
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.RegisterRequest;
 import com.restaurant_management.restaurant_management_backend.auth.dto.response.AuthResponse;
 import com.restaurant_management.restaurant_management_backend.auth.dto.response.MeResponse;
+import com.restaurant_management.restaurant_management_backend.auth.dto.response.PinLoginCandidate;
 import com.restaurant_management.restaurant_management_backend.auth.entity.User;
 
 import jakarta.validation.Valid;
@@ -33,6 +37,19 @@ public class AuthController {
   @PostMapping("/login")
   public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest req) {
     AuthResult result = authService.login(req);
+    return authResponse(HttpStatus.OK, result);
+  }
+
+  // Public — the eligible-staff list itself carries no secret (see PinLoginCandidate javadoc);
+  // it's what the tablet shows before any authentication, same trust level as the login form.
+  @GetMapping("/pin-login-users")
+  public ResponseEntity<List<PinLoginCandidate>> pinLoginUsers() {
+    return ResponseEntity.ok(authService.listPinLoginCandidates());
+  }
+
+  @PostMapping("/pin-login")
+  public ResponseEntity<AuthResponse> pinLogin(@RequestBody @Valid PinLoginRequest req) {
+    AuthResult result = authService.pinLogin(req);
     return authResponse(HttpStatus.OK, result);
   }
 

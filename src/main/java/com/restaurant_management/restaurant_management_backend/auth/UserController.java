@@ -15,11 +15,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.CreateUserRequest;
+import com.restaurant_management.restaurant_management_backend.auth.dto.request.SetPinRequest;
 import com.restaurant_management.restaurant_management_backend.auth.dto.request.UpdateUserRequest;
 import com.restaurant_management.restaurant_management_backend.auth.dto.response.UserResponse;
 import com.restaurant_management.restaurant_management_backend.auth.entity.Role;
 import com.restaurant_management.restaurant_management_backend.auth.entity.User;
 import com.restaurant_management.restaurant_management_backend.shared.dto.response.PageResponse;
+import com.restaurant_management.restaurant_management_backend.shared.enums.RoleName;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.BadRequestException;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceConflictException;
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceNotFoundException;
@@ -126,6 +128,41 @@ public class UserController {
     User user = findUser(id);
     user.setIsActive(!user.getIsActive());
     return ResponseEntity.ok(userMapper.toResponse(userRepository.save(user)));
+  }
+
+  // PIN eligibility is enforced here too, not just at login — an ADMIN who somehow tries to
+  // set a PIN on an ADMIN/CHEF account gets rejected outright, not silently accepted and then
+  // just never usable (that would look like a bug, not a boundary).
+  @PatchMapping("/{id}/pin")
+  @Transactional
+  public ResponseEntity<UserResponse> setPin(
+    @PathVariable Long id,
+    @RequestBody @Valid SetPinRequest req
+  ) {
+    User user = findUser(id);
+    requirePinEligibleRole(user);
+
+    user.setPinHash(passwordEncoder.encode(req.pin()));
+    user.setFailedPinAttempts(0);
+    user.setPinLockedUntil(null);
+    return ResponseEntity.ok(userMapper.toResponse(userRepository.save(user)));
+  }
+
+  @DeleteMapping("/{id}/pin")
+  @Transactional
+  public ResponseEntity<UserResponse> deletePin(@PathVariable Long id) {
+    User user = findUser(id);
+    user.setPinHash(null);
+    user.setFailedPinAttempts(0);
+    user.setPinLockedUntil(null);
+    return ResponseEntity.ok(userMapper.toResponse(userRepository.save(user)));
+  }
+
+  private void requirePinEligibleRole(User user) {
+    RoleName role = user.getRole().getName();
+    if (role != RoleName.WAITER && role != RoleName.CASHIER) {
+      throw new BadRequestException("Solo mesero o cajero pueden tener PIN de acceso");
+    }
   }
 
   @DeleteMapping("/{id}")

@@ -51,4 +51,19 @@ public class User extends AuditableEntity {
 
   @Column(name = "last_login_at")
   private LocalDateTime lastLoginAt;
+
+  // PIN login (see V22 migration): opt-in alternative to password, for WAITER/CASHIER on a
+  // shared tablet. null pinHash means this user has no PIN configured — PATCH /users/{id}/pin
+  // (ADMIN only) is the only way to set one. failedPinAttempts/pinLockedUntil enforce a 5-try
+  // lockout, same rationale as RateLimitFilter's IP-based throttle but per-account: a 4-digit
+  // PIN has only 10,000 combinations, too few to leave unthrottled even behind a role check.
+  @Column(name = "pin_hash")
+  private String pinHash;
+
+  @Column(name = "failed_pin_attempts", nullable = false)
+  @Builder.Default
+  private Integer failedPinAttempts = 0;
+
+  @Column(name = "pin_locked_until")
+  private LocalDateTime pinLockedUntil;
 }

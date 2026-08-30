@@ -2,6 +2,7 @@ package com.restaurant_management.restaurant_management_backend.shared.security;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,11 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
+
+  // /auth/pin-login shares this same per-IP throttle — a 4-digit PIN needs it even more than a
+  // real password does, and AuthServiceImpl's per-account lockout only covers requests that
+  // name a real, PIN-eligible userId, not a flood aimed at made-up ones.
+  private static final Set<String> RATE_LIMITED_PATHS = Set.of("/auth/login", "/auth/pin-login");
 
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
@@ -36,7 +42,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
       HttpServletResponse response,
       FilterChain filterChain
   ) throws ServletException, IOException {
-    if (!"/auth/login".equals(request.getServletPath())) {
+    if (!RATE_LIMITED_PATHS.contains(request.getServletPath())) {
       filterChain.doFilter(request, response);
       return;
     }
