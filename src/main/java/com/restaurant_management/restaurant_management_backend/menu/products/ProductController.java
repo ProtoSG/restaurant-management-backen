@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.restaurant_management.restaurant_management_backend.menu.products.dto.request.CreateProductRequest;
 import com.restaurant_management.restaurant_management_backend.menu.products.dto.request.UpdateProductRequest;
@@ -105,6 +106,19 @@ public class ProductController {
     productService.delete(id);
 
     return ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/{id}/image")
+  public ResponseEntity<ProductResponse> uploadImage(
+    @PathVariable Long id,
+    @RequestParam("image") MultipartFile image
+  ) {
+    return ResponseEntity.ok(productService.uploadImage(id, image));
+  }
+
+  @DeleteMapping("/{id}/image")
+  public ResponseEntity<ProductResponse> deleteImage(@PathVariable Long id) {
+    return ResponseEntity.ok(productService.deleteImage(id));
   }
 
   private <T> PageResponse<T> toPageResponse(Page<T> page) {

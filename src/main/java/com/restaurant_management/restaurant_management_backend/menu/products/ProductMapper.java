@@ -49,7 +49,8 @@ public class ProductMapper {
       product.getPrice(),
       category,
       product.getIsAvailable(),
-      variants
+      variants,
+      product.getImageUrl()
     );
   }
 

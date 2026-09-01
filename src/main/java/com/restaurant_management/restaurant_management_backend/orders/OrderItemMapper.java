@@ -45,7 +45,8 @@ public class OrderItemMapper {
       orderItem.getProduct().getPrice(),
       category,
       orderItem.getProduct().getIsAvailable(),
-      java.util.Collections.emptyList()
+      java.util.Collections.emptyList(),
+      orderItem.getProduct().getImageUrl()
     );
 
     // unitPrice es el precio realmente cobrado en esta línea (base o de variante);

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.restaurant_management.restaurant_management_backend.shared.exceptions.ResourceNotFoundException;
 import com.restaurant_management.restaurant_management_backend.menu.categories.CategoryRepository;
@@ -24,6 +25,7 @@ public class ProductServiceImpl implements ProductService {
   private final ProductRepository productRepository;
   private final CategoryRepository categoryRepository;
   private final ProductMapper productMapper;
+  private final ProductImageStorageService productImageStorageService;
 
   @Override
   public ProductResponse save(CreateProductRequest req) {
@@ -116,6 +118,37 @@ public class ProductServiceImpl implements ProductService {
     }
 
     productRepository.deleteById(id);
+  }
+
+  @Override
+  @Transactional
+  public ProductResponse uploadImage(Long id, MultipartFile image) {
+    Product product = productRepository.findById(id)
+      .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+    String previousImageUrl = product.getImageUrl();
+    String newImageUrl = productImageStorageService.upload(id, image);
+    product.setImageUrl(newImageUrl);
+    ProductResponse response = productMapper.toResponse(productRepository.save(product));
+
+    // Solo después de guardar la referencia nueva — si el borrado del objeto viejo falla, la
+    // foto del producto sigue siendo la nueva de todos modos (best-effort, ver el javadoc del
+    // método: nunca debe tumbar esta operación).
+    productImageStorageService.deleteIfManaged(previousImageUrl);
+
+    return response;
+  }
+
+  @Override
+  @Transactional
+  public ProductResponse deleteImage(Long id) {
+    Product product = productRepository.findById(id)
+      .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+    productImageStorageService.deleteIfManaged(product.getImageUrl());
+    product.setImageUrl(null);
+
+    return productMapper.toResponse(productRepository.save(product));
   }
 
 }

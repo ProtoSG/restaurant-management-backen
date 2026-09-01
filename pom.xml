@@ -186,6 +186,11 @@
       <artifactId>openai-java</artifactId>
       <version>4.54.0</version>
     </dependency>
+    <dependency>
+      <groupId>io.minio</groupId>
+      <artifactId>minio</artifactId>
+      <version>8.5.17</version>
+    </dependency>
 
 	</dependencies>
 

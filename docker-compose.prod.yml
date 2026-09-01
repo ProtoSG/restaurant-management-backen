@@ -18,5 +18,31 @@ services:
       timeout: 5s
       retries: 5
 
+  # Product photos. MINIO_ROOT_USER/PASSWORD here are the actual admin credentials — set them
+  # in .env.prod, then point MINIO_ACCESS_KEY/MINIO_SECRET_KEY (the app's own env vars, see
+  # application-prod.yml) at the same values. MINIO_ENDPOINT should be this service's
+  # publicly-reachable, reverse-proxied URL (needed to build public image URLs), not an
+  # internal Docker network address.
+  minio-prod:
+    image: minio/minio:latest
+    container_name: minio_restaurant_management_prod
+    command: server /data --console-address ":9001"
+    env_file: .env.prod
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodataprod:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pgdataprod:
+  miniodataprod:
