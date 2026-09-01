@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.restaurant_management.restaurant_management_backend.menu.products.dto.request.CreateProductRequest;
 import com.restaurant_management.restaurant_management_backend.menu.products.dto.request.UpdateProductRequest;
@@ -22,5 +23,7 @@ public interface ProductService {
   public ProductResponse update(Long id, UpdateProductRequest req);
   public ProductResponse toggleAvailable(Long id);
   public void delete(Long id);
+  public ProductResponse uploadImage(Long id, MultipartFile image);
+  public ProductResponse deleteImage(Long id);
 
 }

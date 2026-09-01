@@ -1,0 +1,16 @@
+meta {
+  name: Delete Product Image (ADMIN only)
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{base_url}}/products/{{product_id}}/image
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.imageUrl: isNull
+}

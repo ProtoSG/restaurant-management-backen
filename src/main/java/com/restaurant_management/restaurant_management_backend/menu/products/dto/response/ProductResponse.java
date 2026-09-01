@@ -13,6 +13,7 @@ public record ProductResponse(
   BigDecimal price,
   CategoryResponse category,
   Boolean isAvailable,
-  List<ProductVariantResponse> variants
+  List<ProductVariantResponse> variants,
+  String imageUrl
 
 ) {}

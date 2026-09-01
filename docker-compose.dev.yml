@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ddbb_restaurant_management_dev
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres 
+      POSTGRES_PASSWORD: postgres
     volumes:
       - pgdatadev:/var/lib/postgresql/data
     ports:
@@ -17,5 +17,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # Product photos — dev-only creds matching application-dev.yml's defaults, never reuse these
+  # outside local dev. Ports 9010/9011 (not MinIO's usual 9000/9001) — this machine already runs
+  # another project's MinIO on the default ports; keeping each project's dev stack self-contained
+  # beats reusing a shared instance across unrelated projects. Console on :9011.
+  minio-dev:
+    image: minio/minio:latest
+    container_name: minio_restaurant_management_dev
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - miniodatadev:/data
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pgdatadev:
+  miniodatadev:
