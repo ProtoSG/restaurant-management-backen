@@ -53,7 +53,21 @@ public class MinioProperties {
     return bucket;
   }
 
+  // MinioClient.builder().endpoint(String) tolerates a bare host (no scheme) and assumes one
+  // internally — confirmed in prod: MINIO_ENDPOINT without "https://" still let uploads work.
+  // But a public image URL built from that same bare value is a real bug, not a harmless
+  // internal detail: a browser reads a scheme-less "host/path" as relative to the CURRENT page's
+  // own origin, not as an external domain — every <img> silently 404s against the frontend's own
+  // domain instead of MinIO. Never trust the operator to remember the scheme; guarantee one here.
   public String getPublicBaseUrl() {
-    return publicBaseUrl.isBlank() ? endpoint : publicBaseUrl;
+    String base = publicBaseUrl.isBlank() ? endpoint : publicBaseUrl;
+    return withScheme(base);
+  }
+
+  private String withScheme(String url) {
+    if (url.isBlank() || url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+    return "https://" + url;
   }
 }
