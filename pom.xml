@@ -32,7 +32,7 @@
 		     Patches dentro del mismo minor; quitar cuando Boot suba a estas versiones. -->
 		<tomcat.version>10.1.55</tomcat.version>
 		<jackson-bom.version>2.21.4</jackson-bom.version>
-		<postgresql.version>42.7.12</postgresql.version>
+		<postgresql.version>42.7.13</postgresql.version>
 	</properties>
 	<!-- CVE pin: anthropic-java pulls httpcore5/httpclient5 transitively (not managed by
 	     Spring Boot's BOM, so no *.version property to override like the ones above).
